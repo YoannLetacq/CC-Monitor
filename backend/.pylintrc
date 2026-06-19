@@ -22,7 +22,11 @@ max-line-length=100
 
 [DESIGN]
 max-args=8
-max-attributes=10
+# SessionRecord is a frozen data container unioning all cheap-to-read facts
+# of a discovered session (ids, paths, resolution flag, timestamps, counts).
+# Its 11 fields each map one-to-one to a documented response field, so the
+# default attribute cap is raised by one rather than splitting the record.
+max-attributes=11
 
 [BASIC]
 # Allow short names typical in FastAPI/Pydantic context.
