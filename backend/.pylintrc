@@ -1,0 +1,33 @@
+[MASTER]
+# Pylint configuration for cc-monitor-backend.
+# All suppressions are at file level here — never inline (# pylint: disable=).
+
+[MESSAGES CONTROL]
+# Framework-level false-positives documented below.
+#
+# too-few-public-methods (R0903):
+#   Pydantic BaseSettings / BaseModel classes are data containers and
+#   intentionally expose no public methods. Pylint cannot infer that
+#   Pydantic generates __getattr__ / validators at runtime.
+#
+# no-name-in-module (E0611):
+#   pydantic_settings ships type stubs that pylint's static analysis
+#   occasionally cannot resolve. Disabled at project level to avoid
+#   false positives on `from pydantic_settings import BaseSettings`.
+disable=too-few-public-methods,
+        no-name-in-module
+
+[FORMAT]
+max-line-length=100
+
+[DESIGN]
+max-args=8
+max-attributes=10
+
+[BASIC]
+# Allow short names typical in FastAPI/Pydantic context.
+good-names=i,j,k,_,id,db,ok
+
+[LOGGING]
+# Enforce lazy %-formatting in logger calls.
+logging-format-style=old
