@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api import sessions_router
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,8 @@ def create_app() -> FastAPI:
     async def health_check() -> dict[str, str]:
         """Return the service health status."""
         return {"status": "ok"}
+
+    application.include_router(sessions_router)
 
     _mount_static(application)
 
