@@ -23,5 +23,7 @@ coverage/
 # OS
 .DS_Store
 
-# OMC runtime state (kept: .omc/plans/, .omc/reports/)
+# OMC runtime state and local planning artefacts
 .omc/state/
+.omc/plans/
+.omc/reports/
