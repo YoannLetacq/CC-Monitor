@@ -10,6 +10,8 @@ __pycache__/
 dist/
 build/
 .vite/
+frontend/dist/
+backend/static/
 
 # Test & coverage
 coverage/
@@ -21,5 +23,7 @@ coverage/
 # OS
 .DS_Store
 
-# OMC runtime state (kept: .omc/plans/, .omc/reports/)
+# OMC runtime state and local planning artefacts
 .omc/state/
+.omc/plans/
+.omc/reports/
