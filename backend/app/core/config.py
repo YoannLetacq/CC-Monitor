@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     api_port: int = 8787
     cors_origins: list[str] = _DEFAULT_CORS_ORIGINS
     claude_projects_root: str = "~/.claude/projects"
+    session_active_threshold_s: int = 90
+    session_recent_threshold_s: int = 1800
 
     @classmethod
     def settings_customise_sources(
