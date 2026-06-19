@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Build outputs
+dist/
+build/
+.vite/
+
+# Test & coverage
+coverage/
+.pytest_cache/
+
+# Environment
+.env
+
+# OS
+.DS_Store
+
+# OMC runtime state (kept: .omc/plans/, .omc/reports/)
+.omc/state/

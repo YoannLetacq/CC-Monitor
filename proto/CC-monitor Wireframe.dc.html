@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@keyframes ccpulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+@keyframes ccspin { to { transform: rotate(360deg) } }
+</style>
+</helmet>
+
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; width:max-content; min-width:100%; min-height:100vh; box-sizing:border-box; padding:48px; background:#e7e5df; color:#27272a;">
+
+  <!-- DOC HEADER / LEGEND -->
+  <div style="max-width:1180px; margin:0 0 44px;">
+    <div style="font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.14em; color:#a1a1aa; text-transform:uppercase; margin:0 0 10px;">Wireframe mid-fi · desktop</div>
+    <h1 style="font:600 30px/1.15 -apple-system,system-ui,sans-serif; margin:0 0 8px; letter-spacing:-.01em; color:#18181b;">CC-monitor — monitoring live des sous-agents</h1>
+    <p style="font:400 14px/1.6 -apple-system,system-ui,sans-serif; margin:0 0 18px; max-width:760px; color:#52525b;">Vue d'observation (lecture seule) en pseudo temps réel d'une session Claude Code / OMC. Sélection d'une session parmi toutes celles de la machine, puis d'un agent qui filtre les panneaux. Deux directions de layout à comparer, plus les états clés.</p>
+    <div style="display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;">
+      <!-- legend chips -->
+      <span style="display:inline-flex; align-items:center; gap:6px; font:500 12px/1 -apple-system,system-ui,sans-serif; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; border-radius:999px; padding:5px 9px;"><span style="width:7px;height:7px;border-radius:50%;background:#2563eb; animation:ccpulse 1.4s ease-in-out infinite;"></span>En cours · running</span>
+      <span style="display:inline-flex; align-items:center; gap:6px; font:500 12px/1 -apple-system,system-ui,sans-serif; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:999px; padding:5px 9px;"><span style="font:700 10px/1 ui-monospace;">✓</span>Terminé · completed</span>
+      <span style="display:inline-flex; align-items:center; gap:6px; font:500 12px/1 -apple-system,system-ui,sans-serif; color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; border-radius:999px; padding:5px 9px;"><span style="font:700 10px/1 ui-monospace;">✕</span>Échec · failed / blocked</span>
+      <span style="display:inline-flex; align-items:center; gap:6px; font:500 12px/1 -apple-system,system-ui,sans-serif; color:#71717a; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:999px; padding:5px 9px;"><span style="font:700 10px/1 ui-monospace;">◦</span>En file · queued</span>
+      <span style="width:1px; height:18px; background:#d4d4d8; margin:0 2px;"></span>
+      <span style="font:500 12px/1 -apple-system,system-ui,sans-serif; color:#71717a;">Cadre : UI française · rafraîchi par bloc (~0,5–3 s) · mono-session · desktop · lecture seule</span>
+    </div>
+  </div>
+
+  <!-- ============ SECTION F0 ============ -->
+  <div style="margin:0 0 60px;">
+    <div style="font:600 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.1em; text-transform:uppercase; color:#3f3f46; margin:0 0 5px;">F0 · Découverte &amp; sélection de session</div>
+    <div style="font:400 13px/1.5 system-ui; color:#71717a; margin:0 0 22px; max-width:720px;">Choisir QUELLE session observer, sans configuration figée — parmi toutes les sessions de la machine, tous projets confondus. Résolution session ↔ projet via le slug du dossier <span style="font-family:ui-monospace;color:#52525b;">~/.claude/projects/&lt;slug&gt;/</span>.</div>
+    <div style="display:flex; gap:48px; align-items:flex-start;">
+
+      <!-- A. Aucune session -->
+      <div style="flex:none; width:720px;">
+        <div style="font:600 11px/1.3 ui-monospace; letter-spacing:.04em; color:#52525b; text-transform:uppercase; margin:0 0 9px; display:flex; gap:8px; align-items:center;">Aucune session sélectionnée<span style="font:500 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #d4d4d8; border-radius:3px; padding:2px 4px; text-transform:none;">état d'accueil / inactif</span></div>
+        <div style="background:#fff; border:1px solid #e4e4e7; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:10px; height:46px; padding:0 14px; background:#fafafa; border-bottom:1px solid #ececee;">
+            <div style="width:18px; height:18px; border-radius:5px; background:#18181b; display:flex; align-items:center; justify-content:center; color:#fff; font:700 9px/1 ui-monospace;">CC</div>
+            <span style="font:600 13px/1 system-ui; color:#18181b;">CC-monitor</span>
+            <span style="font:500 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">lecture seule</span>
+            <div style="flex:1;"></div>
+            <span style="display:inline-flex; align-items:center; gap:6px; font:500 11px/1 system-ui; color:#a1a1aa;"><span style="width:7px;height:7px;border-radius:50%;background:#d4d4d8;"></span>Hors ligne</span>
+          </div>
+          <div style="height:404px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 60px; background:repeating-linear-gradient(135deg,#fcfcfc,#fcfcfc 11px,#fafafa 11px,#fafafa 22px);">
+            <div style="width:54px; height:54px; border-radius:12px; border:1.5px dashed #d4d4d8; display:flex; align-items:center; justify-content:center; margin:0 0 18px; color:#a1a1aa; font:300 26px/1 system-ui;">⌖</div>
+            <div style="font:600 18px/1.3 system-ui; color:#27272a; margin:0 0 7px;">Aucune session observée</div>
+            <div style="font:400 13px/1.55 system-ui; color:#71717a; max-width:380px; margin:0 0 22px;">Choisissez une session à observer parmi toutes celles présentes sur la machine, ou laissez l'outil détecter la session active la plus récente.</div>
+            <div style="display:flex; gap:10px;">
+              <button style="background:#18181b; color:#fff; border:0; border-radius:6px; padding:10px 16px; font:600 13px/1 system-ui; cursor:pointer;">Découvrir les sessions</button>
+              <button style="background:#fff; color:#27272a; border:1px solid #d4d4d8; border-radius:6px; padding:10px 16px; font:600 13px/1 system-ui; cursor:pointer;">Auto-détecter la session active</button>
+            </div>
+            <div style="font:400 11px/1 ui-monospace; color:#bcbcc0; margin:22px 0 0;">énumère ~/.claude/projects/*/*.jsonl · résout le projet par slug</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. Liste de sessions -->
+      <div style="flex:none; width:1180px;">
+        <div style="font:600 11px/1.3 ui-monospace; letter-spacing:.04em; color:#52525b; text-transform:uppercase; margin:0 0 9px; display:flex; gap:8px; align-items:center;">Liste de sessions à choisir<span style="font:500 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #d4d4d8; border-radius:3px; padding:2px 4px; text-transform:none;">multi-projets</span></div>
+        <div style="background:#fff; border:1px solid #e4e4e7; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:10px; height:46px; padding:0 14px; background:#fafafa; border-bottom:1px solid #ececee;">
+            <div style="width:18px; height:18px; border-radius:5px; background:#18181b; display:flex; align-items:center; justify-content:center; color:#fff; font:700 9px/1 ui-monospace;">CC</div>
+            <span style="font:600 13px/1 system-ui; color:#18181b;">CC-monitor</span>
+            <span style="font:500 13px/1 system-ui; color:#a1a1aa;">/</span>
+            <span style="font:600 13px/1 system-ui; color:#52525b;">Sessions disponibles</span>
+            <div style="flex:1;"></div>
+            <div style="display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #e4e4e7; border-radius:6px; padding:6px 10px; width:240px;">
+              <span style="color:#a1a1aa; font:400 12px/1 system-ui;">⌕</span>
+              <span style="font:400 12px/1 system-ui; color:#bcbcc0;">Filtrer par projet, titre…</span>
+            </div>
+          </div>
+          <!-- auto-detect banner -->
+          <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#eff6ff; border-bottom:1px solid #dbeafe;">
+            <span style="width:7px;height:7px;border-radius:50%;background:#2563eb; animation:ccpulse 1.4s ease-in-out infinite;"></span>
+            <span style="font:500 12px/1.4 system-ui; color:#1e40af;">Session active détectée — <span style="font-family:ui-monospace;">treuil-service-projet · 9f3a…</span> « Auth : sessions + tokens »</span>
+            <div style="flex:1;"></div>
+            <button style="background:#1d4ed8; color:#fff; border:0; border-radius:5px; padding:7px 12px; font:600 12px/1 system-ui; cursor:pointer;">Observer cette session</button>
+          </div>
+          <!-- table header -->
+          <div style="display:grid; grid-template-columns:1.7fr 0.9fr 1.5fr 0.95fr 1fr auto; gap:14px; align-items:center; padding:9px 16px; border-bottom:1px solid #ececee; background:#fbfbfb;">
+            <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#a1a1aa;">Projet · chemin</span>
+            <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#a1a1aa;">sessionId</span>
+            <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#a1a1aa;">Titre · ai-title</span>
+            <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#a1a1aa;">État</span>
+            <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#a1a1aa;">Dernière activité</span>
+            <span></span>
+          </div>
+          <!-- row 1 active selected -->
+          <div style="display:grid; grid-template-columns:1.7fr 0.9fr 1.5fr 0.95fr 1fr auto; gap:14px; align-items:center; padding:13px 16px; border-bottom:1px solid #f1f1f2; background:#f8faff; box-shadow:inset 3px 0 0 #2563eb;">
+            <div><div style="font:500 13px/1.3 system-ui; color:#18181b;">treuil-service-projet</div><div style="font:400 11px/1.3 ui-monospace; color:#a1a1aa;">/home/yoann/treuil-service-projet</div></div>
+            <span style="font:500 12px/1 ui-monospace; color:#52525b;">9f3a4c1e</span>
+            <span style="font:400 13px/1.3 system-ui; color:#3f3f46;">Auth : sessions + tokens</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; width:max-content; font:500 11px/1 system-ui; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; border-radius:999px; padding:4px 9px;"><span style="width:6px;height:6px;border-radius:50%;background:#2563eb; animation:ccpulse 1.4s ease-in-out infinite;"></span>Active</span>
+            <span style="font:400 12px/1 system-ui; color:#52525b;">il y a 3 s</span>
+            <button style="background:#18181b; color:#fff; border:0; border-radius:5px; padding:7px 12px; font:600 12px/1 system-ui; cursor:pointer;">Observer</button>
+          </div>
+          <!-- row 2 -->
+          <div style="display:grid; grid-template-columns:1.7fr 0.9fr 1.5fr 0.95fr 1fr auto; gap:14px; align-items:center; padding:13px 16px; border-bottom:1px solid #f1f1f2;">
+            <div><div style="font:500 13px/1.3 system-ui; color:#18181b;">treuil-service-projet</div><div style="font:400 11px/1.3 ui-monospace; color:#a1a1aa;">/home/yoann/treuil-service-projet</div></div>
+            <span style="font:500 12px/1 ui-monospace; color:#52525b;">7b1c08d2</span>
+            <span style="font:400 13px/1.3 system-ui; color:#3f3f46;">Refactor paiements</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; width:max-content; font:500 11px/1 system-ui; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:999px; padding:4px 9px;"><span style="font:700 9px/1 ui-monospace;">◴</span>Récente</span>
+            <span style="font:400 12px/1 system-ui; color:#52525b;">il y a 14 min</span>
+            <button style="background:#fff; color:#27272a; border:1px solid #d4d4d8; border-radius:5px; padding:7px 12px; font:600 12px/1 system-ui; cursor:pointer;">Observer</button>
+          </div>
+          <!-- row 3 -->
+          <div style="display:grid; grid-template-columns:1.7fr 0.9fr 1.5fr 0.95fr 1fr auto; gap:14px; align-items:center; padding:13px 16px; border-bottom:1px solid #f1f1f2;">
+            <div><div style="font:500 13px/1.3 system-ui; color:#18181b;">omc-dashboard</div><div style="font:400 11px/1.3 ui-monospace; color:#a1a1aa;">/home/yoann/omc-dashboard</div></div>
+            <span style="font:500 12px/1 ui-monospace; color:#52525b;">2e90f7a5</span>
+            <span style="font:400 13px/1.3 system-ui; color:#3f3f46;">Setup CI docker</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; width:max-content; font:500 11px/1 system-ui; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:999px; padding:4px 9px;"><span style="font:700 9px/1 ui-monospace;">◴</span>Récente</span>
+            <span style="font:400 12px/1 system-ui; color:#52525b;">il y a 1 h</span>
+            <button style="background:#fff; color:#27272a; border:1px solid #d4d4d8; border-radius:5px; padding:7px 12px; font:600 12px/1 system-ui; cursor:pointer;">Observer</button>
+          </div>
+          <!-- row 4 -->
+          <div style="display:grid; grid-template-columns:1.7fr 0.9fr 1.5fr 0.95fr 1fr auto; gap:14px; align-items:center; padding:13px 16px; border-bottom:1px solid #f1f1f2;">
+            <div><div style="font:500 13px/1.3 system-ui; color:#18181b;">treuil-billing</div><div style="font:400 11px/1.3 ui-monospace; color:#a1a1aa;">/home/yoann/treuil-billing</div></div>
+            <span style="font:500 12px/1 ui-monospace; color:#52525b;">c4d1b6e9</span>
+            <span style="font:400 13px/1.3 system-ui; color:#3f3f46;">Migration DB v3</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; width:max-content; font:500 11px/1 system-ui; color:#52525b; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:999px; padding:4px 9px;"><span style="font:700 9px/1 ui-monospace;">✓</span>Terminée</span>
+            <span style="font:400 12px/1 system-ui; color:#52525b;">hier 18:42</span>
+            <button style="background:#fff; color:#27272a; border:1px solid #d4d4d8; border-radius:5px; padding:7px 12px; font:600 12px/1 system-ui; cursor:pointer;">Observer</button>
+          </div>
+          <!-- row 5 -->
+          <div style="display:grid; grid-template-columns:1.7fr 0.9fr 1.5fr 0.95fr 1fr auto; gap:14px; align-items:center; padding:13px 16px;">
+            <div><div style="font:500 13px/1.3 system-ui; color:#18181b;">omc-dashboard</div><div style="font:400 11px/1.3 ui-monospace; color:#a1a1aa;">/home/yoann/omc-dashboard</div></div>
+            <span style="font:500 12px/1 ui-monospace; color:#52525b;">a0f53b8c</span>
+            <span style="font:400 13px/1.3 system-ui; color:#bcbcc0; font-style:italic;">— sans titre —</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; width:max-content; font:500 11px/1 system-ui; color:#52525b; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:999px; padding:4px 9px;"><span style="font:700 9px/1 ui-monospace;">✓</span>Terminée</span>
+            <span style="font:400 12px/1 system-ui; color:#52525b;">16 juin</span>
+            <button style="background:#fff; color:#27272a; border:1px solid #d4d4d8; border-radius:5px; padding:7px 12px; font:600 12px/1 system-ui; cursor:pointer;">Observer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- C. Bascule en cours -->
+      <div style="flex:none; width:720px;">
+        <div style="font:600 11px/1.3 ui-monospace; letter-spacing:.04em; color:#52525b; text-transform:uppercase; margin:0 0 9px; display:flex; gap:8px; align-items:center;">Bascule de session en cours<span style="font:500 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #d4d4d8; border-radius:3px; padding:2px 4px; text-transform:none;">recadrage F1–F6</span></div>
+        <div style="position:relative; background:#fff; border:1px solid #e4e4e7; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:10px; height:46px; padding:0 14px; background:#fafafa; border-bottom:1px solid #ececee;">
+            <div style="width:18px; height:18px; border-radius:5px; background:#18181b; display:flex; align-items:center; justify-content:center; color:#fff; font:700 9px/1 ui-monospace;">CC</div>
+            <span style="font:600 13px/1 system-ui; color:#18181b;">CC-monitor</span>
+            <div style="flex:1;"></div>
+            <span style="font:500 11px/1 ui-monospace; color:#a1a1aa;">9f3a… → 2e90…</span>
+          </div>
+          <!-- ghost panels -->
+          <div style="height:404px; padding:14px; display:grid; grid-template-columns:1fr 1.4fr 1fr; gap:12px; filter:blur(1.5px); opacity:.45;">
+            <div style="border:1px solid #ececee; border-radius:6px; background:#fafafa;"></div>
+            <div style="border:1px solid #ececee; border-radius:6px; background:#fafafa;"></div>
+            <div style="border:1px solid #ececee; border-radius:6px; background:#fafafa;"></div>
+          </div>
+          <div style="position:absolute; inset:46px 0 0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(255,255,255,.55);">
+            <div style="width:30px; height:30px; border:3px solid #e4e4e7; border-top-color:#18181b; border-radius:50%; animation:ccspin .8s linear infinite; margin:0 0 14px;"></div>
+            <div style="font:600 14px/1.3 system-ui; color:#27272a;">Recadrage des panneaux…</div>
+            <div style="font:400 12px/1.4 system-ui; color:#71717a; margin:6px 0 0;">omc-dashboard · résolution du slug → lecture reports/ + état + transcript</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ COCKPIT DIRECTION A ============ -->
+  <div style="margin:0 0 60px;">
+    <div style="font:600 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.1em; text-transform:uppercase; color:#3f3f46; margin:0 0 5px;">Cockpit — Direction A · 3 colonnes</div>
+    <div style="font:400 13px/1.5 system-ui; color:#71717a; margin:0 0 22px; max-width:760px;">Vue live nominale. Gauche : topologie + timeline. Centre : raisonnement + activité outils de l'agent sélectionné. Droite : vue d'ensemble + rapport. État : <span style="color:#1d4ed8;font-weight:600;">streaming</span>, agent <span style="font-family:ui-monospace;">W1-backend</span> sélectionné (en cours), 1 échec remonté.</div>
+
+    <div style="flex:none; width:1440px;">
+      <div style="background:#fff; border:1px solid #d4d4d8; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); overflow:hidden;">
+
+        <!-- TOP BAR -->
+        <div style="display:flex; align-items:center; gap:14px; height:52px; padding:0 16px; background:#fafafa; border-bottom:1px solid #e4e4e7;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:20px; height:20px; border-radius:6px; background:#18181b; display:flex; align-items:center; justify-content:center; color:#fff; font:700 10px/1 ui-monospace;">CC</div>
+            <span style="font:600 14px/1 system-ui; color:#18181b;">CC-monitor</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #e4e4e7; border-radius:7px; padding:5px 10px; cursor:pointer;">
+            <span style="font:600 12px/1 system-ui; color:#3f3f46;">treuil-service-projet</span>
+            <span style="width:1px;height:12px;background:#d4d4d8;"></span>
+            <span style="font:500 12px/1 ui-monospace; color:#71717a;">9f3a…</span>
+            <span style="font:400 12px/1 system-ui; color:#a1a1aa;">Auth : sessions + tokens</span>
+            <span style="font:400 11px/1 system-ui; color:#bcbcc0;">▾</span>
+          </div>
+          <div style="flex:1;"></div>
+          <!-- F6 inline KPIs -->
+          <div style="display:flex; align-items:center; gap:14px;">
+            <span style="display:inline-flex; align-items:center; gap:6px; font:500 12px/1 system-ui; color:#3f3f46;"><span style="width:7px;height:7px;border-radius:50%;background:#2563eb;animation:ccpulse 1.4s ease-in-out infinite;"></span>3 actifs</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; font:500 12px/1 system-ui; color:#3f3f46;"><span style="color:#16a34a;font:700 11px/1 ui-monospace;">✓</span>3 terminés</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; font:600 12px/1 system-ui; color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; border-radius:999px; padding:4px 9px;"><span style="font:700 10px/1 ui-monospace;">✕</span>1 échec</span>
+            <span style="width:1px;height:18px;background:#e4e4e7;"></span>
+            <span style="font:500 12px/1 ui-monospace; color:#52525b;">⏱ 12:31</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; font:600 12px/1 system-ui; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:999px; padding:4px 9px;"><span style="width:7px;height:7px;border-radius:50%;background:#22c55e;animation:ccpulse 1.4s ease-in-out infinite;"></span>Live</span>
+          </div>
+        </div>
+
+        <!-- BODY -->
+        <div style="display:flex; height:806px;">
+
+          <!-- LEFT COLUMN -->
+          <div style="width:340px; flex:none; border-right:1px solid #e4e4e7; display:flex; flex-direction:column;">
+            <!-- F1 TREE -->
+            <div style="flex:1; min-height:0; display:flex; flex-direction:column; border-bottom:1px solid #e4e4e7;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Topologie · arbre des agents</span>
+                <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F1</span>
+              </div>
+              <div style="flex:1; min-height:0; overflow:hidden; padding:10px 12px;">
+                <!-- principal -->
+                <div style="display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid #e4e4e7; border-radius:6px; background:#fff;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex:none;animation:ccpulse 1.4s ease-in-out infinite;"></span>
+                  <span style="font:600 12px/1 ui-monospace; color:#18181b;">agent principal</span>
+                  <span style="font:400 10px/1 system-ui; color:#a1a1aa;">orchestrateur</span>
+                  <div style="flex:1;"></div>
+                  <span style="font:500 10px/1 ui-monospace; color:#71717a;">12:31</span>
+                </div>
+                <!-- level 1 -->
+                <div style="margin-left:9px; border-left:1.5px solid #e4e4e7; padding-left:0;">
+                  <!-- bootstrap-lead -->
+                  <div style="display:flex; align-items:center;">
+                    <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                    <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:4px 0; border:1px solid #e4e4e7; border-radius:6px; background:#fff;">
+                      <span style="color:#16a34a;font:700 10px/1 ui-monospace;flex:none;width:9px;text-align:center;">✓</span>
+                      <span style="font:600 11px/1 ui-monospace; color:#3f3f46;">bootstrap-lead</span>
+                      <div style="flex:1;"></div>
+                      <span style="font:500 9px/1 ui-monospace; color:#a1a1aa;">4m 04s</span>
+                    </div>
+                  </div>
+                  <!-- auth-sessions-lead -->
+                  <div style="display:flex; align-items:center;">
+                    <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                    <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:4px 0; border:1px solid #e4e4e7; border-radius:6px; background:#fff;">
+                      <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex:none;animation:ccpulse 1.4s ease-in-out infinite;"></span>
+                      <span style="font:600 11px/1 ui-monospace; color:#18181b;">auth-sessions-lead</span>
+                      <span style="font:400 9px/1 system-ui; color:#a1a1aa;">lead</span>
+                      <div style="flex:1;"></div>
+                      <span style="font:500 9px/1 ui-monospace; color:#71717a;">6m 12s</span>
+                    </div>
+                  </div>
+                  <!-- level 2: Lot 1 -->
+                  <div style="margin-left:9px; border-left:1.5px solid #e4e4e7;">
+                    <div style="display:flex; align-items:center;">
+                      <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                      <div style="flex:1; display:flex; align-items:center; gap:6px; padding:4px 8px; margin:4px 0;">
+                        <span style="font:600 9px/1 ui-monospace; letter-spacing:.04em; text-transform:uppercase; color:#a1a1aa;">Lot 1 · 5 workers ∥</span>
+                        <div style="flex:1; height:1px; background:#ededee;"></div>
+                      </div>
+                    </div>
+                    <div style="margin-left:9px; border-left:1.5px solid #eef0fb;">
+                      <!-- W1 selected -->
+                      <div style="display:flex; align-items:center;">
+                        <div style="width:11px; height:1.5px; background:#bfdbfe;"></div>
+                        <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:3px 0; border:1px solid #2563eb; border-radius:6px; background:#f8faff; box-shadow:0 0 0 1px #2563eb;">
+                          <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex:none;animation:ccpulse 1.4s ease-in-out infinite;"></span>
+                          <span style="font:700 11px/1 ui-monospace; color:#1d4ed8;">W1-backend</span>
+                          <div style="flex:1;"></div>
+                          <span style="font:500 9px/1 ui-monospace; color:#2563eb;">1m 12s</span>
+                        </div>
+                      </div>
+                      <!-- W2 -->
+                      <div style="display:flex; align-items:center;">
+                        <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                        <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:3px 0; border:1px solid #e4e4e7; border-radius:6px; background:#fff;">
+                          <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex:none;animation:ccpulse 1.4s ease-in-out infinite;"></span>
+                          <span style="font:600 11px/1 ui-monospace; color:#3f3f46;">W2-frontend</span>
+                          <div style="flex:1;"></div>
+                          <span style="font:500 9px/1 ui-monospace; color:#71717a;">47s</span>
+                        </div>
+                      </div>
+                      <!-- W3 -->
+                      <div style="display:flex; align-items:center;">
+                        <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                        <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:3px 0; border:1px solid #e4e4e7; border-radius:6px; background:#fff;">
+                          <span style="color:#16a34a;font:700 10px/1 ui-monospace;flex:none;width:9px;text-align:center;">✓</span>
+                          <span style="font:600 11px/1 ui-monospace; color:#3f3f46;">W3-docker</span>
+                          <div style="flex:1;"></div>
+                          <span style="font:500 9px/1 ui-monospace; color:#a1a1aa;">1m 58s</span>
+                        </div>
+                      </div>
+                      <!-- W4 -->
+                      <div style="display:flex; align-items:center;">
+                        <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                        <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:3px 0; border:1px solid #e4e4e7; border-radius:6px; background:#fff;">
+                          <span style="color:#16a34a;font:700 10px/1 ui-monospace;flex:none;width:9px;text-align:center;">✓</span>
+                          <span style="font:600 11px/1 ui-monospace; color:#3f3f46;">W4-db-migrate</span>
+                          <div style="flex:1;"></div>
+                          <span style="font:500 9px/1 ui-monospace; color:#a1a1aa;">52s</span>
+                        </div>
+                      </div>
+                      <!-- W5 failed -->
+                      <div style="display:flex; align-items:center;">
+                        <div style="width:11px; height:1.5px; background:#fecaca;"></div>
+                        <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:3px 0; border:1px solid #fca5a5; border-radius:6px; background:#fef2f2;">
+                          <span style="color:#dc2626;font:700 10px/1 ui-monospace;flex:none;width:9px;text-align:center;">✕</span>
+                          <span style="font:700 11px/1 ui-monospace; color:#b91c1c;">W5-api-contract</span>
+                          <div style="flex:1;"></div>
+                          <span style="font:600 9px/1 ui-monospace; color:#dc2626;">échec</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Lot 2 -->
+                    <div style="display:flex; align-items:center;">
+                      <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                      <div style="flex:1; display:flex; align-items:center; gap:6px; padding:4px 8px; margin:4px 0;">
+                        <span style="font:600 9px/1 ui-monospace; letter-spacing:.04em; text-transform:uppercase; color:#a1a1aa;">Lot 2 · en file</span>
+                        <div style="flex:1; height:1px; background:#ededee;"></div>
+                      </div>
+                    </div>
+                    <div style="margin-left:9px; border-left:1.5px dashed #e4e4e7;">
+                      <div style="display:flex; align-items:center;">
+                        <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                        <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:3px 0; border:1px dashed #d4d4d8; border-radius:6px; background:#fafafa;">
+                          <span style="width:8px;height:8px;border-radius:50%;border:1.5px solid #c4c4c8;flex:none;"></span>
+                          <span style="font:500 11px/1 ui-monospace; color:#a1a1aa;">W6-security-review</span>
+                          <div style="flex:1;"></div>
+                          <span style="font:500 9px/1 system-ui; color:#bcbcc0;">en file</span>
+                        </div>
+                      </div>
+                      <div style="display:flex; align-items:center;">
+                        <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                        <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:3px 0; border:1px dashed #d4d4d8; border-radius:6px; background:#fafafa;">
+                          <span style="width:8px;height:8px;border-radius:50%;border:1.5px solid #c4c4c8;flex:none;"></span>
+                          <span style="font:500 11px/1 ui-monospace; color:#a1a1aa;">W7-tests</span>
+                          <div style="flex:1;"></div>
+                          <span style="font:500 9px/1 system-ui; color:#bcbcc0;">en file</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- verifier -->
+                  <div style="display:flex; align-items:center;">
+                    <div style="width:11px; height:1.5px; background:#e4e4e7;"></div>
+                    <div style="flex:1; display:flex; align-items:center; gap:7px; padding:6px 8px; margin:4px 0; border:1px dashed #d4d4d8; border-radius:6px; background:#fafafa;">
+                      <span style="width:8px;height:8px;border-radius:50%;border:1.5px solid #c4c4c8;flex:none;"></span>
+                      <span style="font:500 11px/1 ui-monospace; color:#a1a1aa;">verifier</span>
+                      <div style="flex:1;"></div>
+                      <span style="font:500 9px/1 system-ui; color:#bcbcc0;">en file</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- F2 TIMELINE -->
+            <div style="height:226px; flex:none; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Timeline chronologique</span>
+                <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F2</span>
+              </div>
+              <div style="flex:1; padding:10px 12px; display:flex; flex-direction:column; gap:5px; overflow:hidden;">
+                <!-- lanes -->
+                <div style="display:flex; align-items:center; gap:6px;"><span style="width:64px; flex:none; font:500 9px/1 ui-monospace; color:#71717a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">bootstrap</span><div style="flex:1; position:relative; height:13px;"><div style="position:absolute; left:0%; width:34%; top:2px; height:9px; border-radius:3px; background:#bbf7d0; border:1px solid #86efac;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:6px;"><span style="width:64px; flex:none; font:500 9px/1 ui-monospace; color:#71717a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">auth-lead</span><div style="flex:1; position:relative; height:13px;"><div style="position:absolute; left:36%; right:0; top:2px; height:9px; border-radius:3px; background:#bfdbfe; border:1px solid #93c5fd;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:4px; margin:1px 0;"><span style="width:64px;flex:none;"></span><div style="flex:1; display:flex; align-items:center; gap:5px;"><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#bcbcc0;">Lot 1 ∥</span><div style="flex:1;height:1px;background:#f1f1f2;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:6px;"><span style="width:64px; flex:none; font:500 9px/1 ui-monospace; color:#1d4ed8;">W1-back</span><div style="flex:1; position:relative; height:13px;"><div style="position:absolute; left:58%; right:0; top:2px; height:9px; border-radius:3px; background:#bfdbfe; border:1px solid #2563eb;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:6px;"><span style="width:64px; flex:none; font:500 9px/1 ui-monospace; color:#71717a;">W2-front</span><div style="flex:1; position:relative; height:13px;"><div style="position:absolute; left:63%; right:0; top:2px; height:9px; border-radius:3px; background:#bfdbfe; border:1px solid #93c5fd;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:6px;"><span style="width:64px; flex:none; font:500 9px/1 ui-monospace; color:#71717a;">W3-dock</span><div style="flex:1; position:relative; height:13px;"><div style="position:absolute; left:58%; width:22%; top:2px; height:9px; border-radius:3px; background:#bbf7d0; border:1px solid #86efac;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:6px;"><span style="width:64px; flex:none; font:500 9px/1 ui-monospace; color:#71717a;">W4-db</span><div style="flex:1; position:relative; height:13px;"><div style="position:absolute; left:60%; width:11%; top:2px; height:9px; border-radius:3px; background:#bbf7d0; border:1px solid #86efac;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:6px;"><span style="width:64px; flex:none; font:600 9px/1 ui-monospace; color:#b91c1c;">W5-api</span><div style="flex:1; position:relative; height:13px;"><div style="position:absolute; left:59%; width:14%; top:2px; height:9px; border-radius:3px; background:#fecaca; border:1px solid #f87171;"></div><div style="position:absolute; left:calc(59% + 14%); top:0; font:700 9px/1 ui-monospace; color:#dc2626;">✕</div></div></div>
+                <div style="display:flex; align-items:center; gap:6px; margin-top:auto;"><span style="width:64px;flex:none;"></span><div style="flex:1; display:flex; justify-content:space-between; font:500 8px/1 ui-monospace; color:#bcbcc0; border-top:1px solid #ededee; padding-top:3px;"><span>t0</span><span>+6m</span><span>+12m</span><span style="color:#2563eb;">live ▸</span></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CENTER COLUMN -->
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; border-right:1px solid #e4e4e7;">
+            <!-- selected agent header -->
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid #e4e4e7; background:#f8faff;">
+              <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#93a3c4;">Agent sélectionné</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; font:700 13px/1 ui-monospace; color:#1d4ed8;"><span style="width:8px;height:8px;border-radius:50%;background:#2563eb;animation:ccpulse 1.4s ease-in-out infinite;"></span>W1-backend</span>
+              <span style="display:inline-flex; align-items:center; gap:5px; font:500 11px/1 system-ui; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; border-radius:999px; padding:3px 8px;">En cours</span>
+              <span style="font:400 11px/1 ui-monospace; color:#a1a1aa;">agent_id ad190d69…</span>
+              <div style="flex:1;"></div>
+              <span style="font:500 11px/1 system-ui; color:#71717a;">Filtre F3 · F4 · F5 sur cet agent</span>
+            </div>
+            <!-- F3 raisonnement -->
+            <div style="height:330px; flex:none; display:flex; flex-direction:column; border-bottom:1px solid #e4e4e7;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 16px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Raisonnement live</span>
+                <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F3</span>
+                <div style="flex:1;"></div>
+                <span style="font:500 10px/1 system-ui; color:#a1a1aa;">ajout par bloc · thinking 32 · text 44</span>
+              </div>
+              <div style="flex:1; min-height:0; overflow:hidden; padding:14px 16px; display:flex; flex-direction:column; gap:11px;">
+                <!-- thinking block -->
+                <div style="border-left:2px solid #c4b5fd; padding:0 0 0 12px;">
+                  <div style="display:flex; align-items:center; gap:6px; margin:0 0 6px;"><span style="font:600 9px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#7c3aed;">thinking</span><span style="font:400 9px/1 ui-monospace; color:#c4b5fd;">bloc #14</span></div>
+                  <div style="display:flex; flex-direction:column; gap:5px;"><div style="height:7px;border-radius:4px;background:#ededee;width:96%;"></div><div style="height:7px;border-radius:4px;background:#ededee;width:88%;"></div><div style="height:7px;border-radius:4px;background:#ededee;width:74%;"></div></div>
+                </div>
+                <!-- text block -->
+                <div style="border-left:2px solid #cbd5e1; padding:0 0 0 12px;">
+                  <div style="display:flex; align-items:center; gap:6px; margin:0 0 6px;"><span style="font:600 9px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#475569;">text · réponse</span><span style="font:400 9px/1 ui-monospace; color:#cbd5e1;">bloc #15</span></div>
+                  <div style="display:flex; flex-direction:column; gap:5px;"><div style="height:7px;border-radius:4px;background:#e8e8ea;width:92%;"></div><div style="height:7px;border-radius:4px;background:#e8e8ea;width:60%;"></div></div>
+                </div>
+                <!-- redacted block -->
+                <div style="display:flex; align-items:center; gap:9px; padding:9px 11px; border:1px dashed #d4d4d8; border-radius:6px; background:repeating-linear-gradient(135deg,#fafafa,#fafafa 6px,#f4f4f5 6px,#f4f4f5 12px);">
+                  <span style="font:400 13px/1 system-ui; color:#a1a1aa;">🔒</span>
+                  <div><div style="font:600 11px/1.3 system-ui; color:#52525b;">Raisonnement masqué</div><div style="font:400 10px/1.3 ui-monospace; color:#a1a1aa;">redacted_thinking · contenu chiffré, non lisible</div></div>
+                </div>
+                <!-- streaming thinking (live) -->
+                <div style="border-left:2px solid #c4b5fd; padding:0 0 0 12px;">
+                  <div style="display:flex; align-items:center; gap:6px; margin:0 0 6px;"><span style="font:600 9px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#7c3aed;">thinking</span><span style="display:inline-flex;align-items:center;gap:4px;font:400 9px/1 ui-monospace; color:#2563eb;"><span style="width:5px;height:5px;border-radius:50%;background:#2563eb;animation:ccpulse 1.1s ease-in-out infinite;"></span>bloc en réception…</span></div>
+                  <div style="display:flex; flex-direction:column; gap:5px;"><div style="height:7px;border-radius:4px;background:#ededee;width:80%;"></div><div style="height:7px;border-radius:4px;background:#f4f4f5;width:40%;"></div></div>
+                </div>
+              </div>
+            </div>
+            <!-- F4 outils -->
+            <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 16px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Activité outils</span>
+                <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F4</span>
+                <span style="font:600 9px/1 ui-monospace; color:#3f3f46; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:3px; padding:2px 5px;">78 appels</span>
+                <div style="flex:1;"></div>
+                <span style="font:500 10px/1 system-ui; color:#a1a1aa;">contenu le plus volumineux · virtualisé</span>
+              </div>
+              <div style="flex:1; min-height:0; overflow:hidden; padding:10px 12px; display:flex; flex-direction:column; gap:5px;">
+                <!-- tool row Bash OK -->
+                <div style="display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid #e4e4e7; border-radius:6px; background:#fff;">
+                  <span style="font:600 10px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 6px; flex:none; width:46px; text-align:center;">Bash</span>
+                  <span style="font:500 11px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">alembic upgrade head</span>
+                  <span style="display:inline-flex; align-items:center; gap:5px; font:600 10px/1 ui-monospace; color:#15803d;">✓ OK</span>
+                </div>
+                <!-- Read -->
+                <div style="display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid #e4e4e7; border-radius:6px; background:#fff;">
+                  <span style="font:600 10px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 6px; flex:none; width:46px; text-align:center;">Read</span>
+                  <span style="font:500 11px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">app/auth/sessions.py</span>
+                  <span style="font:400 10px/1 ui-monospace; color:#a1a1aa;">312 lignes</span>
+                </div>
+                <!-- Edit expanded with result -->
+                <div style="border:1px solid #e4e4e7; border-radius:6px; background:#fff; overflow:hidden;">
+                  <div style="display:flex; align-items:center; gap:9px; padding:8px 10px;">
+                    <span style="font:600 10px/1 ui-monospace; color:#5b21b6; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:4px; padding:3px 6px; flex:none; width:46px; text-align:center;">Edit</span>
+                    <span style="font:500 11px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">app/auth/sessions.py · +24 −6</span>
+                    <span style="font:400 10px/1 ui-monospace; color:#bcbcc0;">▴</span>
+                  </div>
+                  <div style="border-top:1px dashed #ececee; background:#fbfbfb; padding:9px 12px 10px;">
+                    <div style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa; margin:0 0 6px;">tool_result · tool_use_id 1f8c…</div>
+                    <div style="display:flex; flex-direction:column; gap:4px;"><div style="height:6px;border-radius:3px;background:#e8e8ea;width:90%;"></div><div style="height:6px;border-radius:3px;background:#e8e8ea;width:70%;"></div></div>
+                  </div>
+                </div>
+                <!-- Bash pytest -->
+                <div style="display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid #e4e4e7; border-radius:6px; background:#fff;">
+                  <span style="font:600 10px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 6px; flex:none; width:46px; text-align:center;">Bash</span>
+                  <span style="font:500 11px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">pytest tests/auth -q</span>
+                  <span style="display:inline-flex; align-items:center; gap:5px; font:600 10px/1 ui-monospace; color:#15803d;">✓ 79 passed</span>
+                </div>
+                <!-- Bash fail -->
+                <div style="display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid #fca5a5; border-radius:6px; background:#fef6f6;">
+                  <span style="font:600 10px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 6px; flex:none; width:46px; text-align:center;">Bash</span>
+                  <span style="font:500 11px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">mypy app/auth</span>
+                  <span style="display:inline-flex; align-items:center; gap:5px; font:600 10px/1 ui-monospace; color:#b91c1c;">✕ 2 errors</span>
+                </div>
+                <!-- live tool -->
+                <div style="display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid #bfdbfe; border-radius:6px; background:#f8faff;">
+                  <span style="font:600 10px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 6px; flex:none; width:46px; text-align:center;">Write</span>
+                  <span style="font:500 11px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">app/auth/tokens.py</span>
+                  <span style="display:inline-flex; align-items:center; gap:5px; font:600 10px/1 ui-monospace; color:#2563eb;"><span style="width:6px;height:6px;border-radius:50%;background:#2563eb;animation:ccpulse 1.1s ease-in-out infinite;"></span>en cours</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div style="width:384px; flex:none; display:flex; flex-direction:column;">
+            <!-- F6 overview -->
+            <div style="flex:none; display:flex; flex-direction:column; border-bottom:1px solid #e4e4e7;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Vue d'ensemble session</span>
+                <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F6</span>
+              </div>
+              <div style="padding:14px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin:0 0 12px;">
+                  <div style="border:1px solid #e4e4e7; border-radius:7px; padding:10px; text-align:center; background:#f8faff;"><div style="font:700 22px/1 system-ui; color:#1d4ed8;">3</div><div style="font:500 9px/1.2 system-ui; color:#71717a; margin-top:4px;">actifs</div></div>
+                  <div style="border:1px solid #e4e4e7; border-radius:7px; padding:10px; text-align:center;"><div style="font:700 22px/1 system-ui; color:#16a34a;">3</div><div style="font:500 9px/1.2 system-ui; color:#71717a; margin-top:4px;">terminés</div></div>
+                  <div style="border:1px solid #fecaca; border-radius:7px; padding:10px; text-align:center; background:#fef2f2;"><div style="font:700 22px/1 system-ui; color:#b91c1c;">1</div><div style="font:500 9px/1.2 system-ui; color:#b91c1c; margin-top:4px;">échec</div></div>
+                  <div style="border:1px solid #e4e4e7; border-radius:7px; padding:10px; text-align:center;"><div style="font:700 22px/1 system-ui; color:#a1a1aa;">3</div><div style="font:500 9px/1.2 system-ui; color:#71717a; margin-top:4px;">en file</div></div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-top:1px solid #f1f1f2;">
+                  <span style="font:500 11px/1 system-ui; color:#71717a;">Temps écoulé</span>
+                  <span style="font:600 13px/1 ui-monospace; color:#27272a;">12 min 31 s</span>
+                </div>
+                <!-- gates synth -->
+                <div style="padding:8px 0 2px; border-top:1px solid #f1f1f2;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 7px;"><span style="font:500 11px/1 system-ui; color:#71717a;">Synthèse des gates</span><span style="font:600 11px/1 ui-monospace; color:#3f3f46;">11 PASS · 2 FAIL</span></div>
+                  <div style="display:flex; height:8px; border-radius:4px; overflow:hidden; border:1px solid #e4e4e7;"><div style="width:85%; background:#86efac;"></div><div style="width:15%; background:#fca5a5;"></div></div>
+                </div>
+              </div>
+            </div>
+            <!-- F5 report (not yet written) -->
+            <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Rapport final</span>
+                <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F5</span>
+                <div style="flex:1;"></div>
+                <span style="font:500 10px/1 ui-monospace; color:#bcbcc0;">auth-sessions__api.md</span>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 36px; background:repeating-linear-gradient(135deg,#fcfcfc,#fcfcfc 11px,#fafafa 11px,#fafafa 22px);">
+                <div style="width:42px; height:42px; border-radius:10px; border:1.5px dashed #d4d4d8; display:flex; align-items:center; justify-content:center; margin:0 0 14px; color:#a1a1aa; font:300 20px/1 system-ui;">⧗</div>
+                <div style="font:600 14px/1.3 system-ui; color:#52525b; margin:0 0 6px;">Rapport non disponible</div>
+                <div style="font:400 12px/1.5 system-ui; color:#a1a1aa; max-width:240px;">L'agent <span style="font-family:ui-monospace;">W1-backend</span> est encore en cours. Le rapport <span style="font-family:ui-monospace;">reports/*.md</span> est écrit en fin de tâche.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COCKPIT DIRECTION B ============ -->
+  <div style="margin:0 0 60px;">
+    <div style="font:600 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.1em; text-transform:uppercase; color:#3f3f46; margin:0 0 5px;">Cockpit — Direction B · timeline en bandeau, rapport en drawer</div>
+    <div style="font:400 13px/1.5 system-ui; color:#71717a; margin:0 0 22px; max-width:760px;">Bandeau KPI + timeline pleine largeur en haut (parallélisme des lots bien visible), raisonnement et outils côte à côte, rapport en panneau latéral. État : agent <span style="font-family:ui-monospace;">W3-docker</span> sélectionné (terminé) → rapport disponible.</div>
+
+    <div style="flex:none; width:1440px;">
+      <div style="background:#fff; border:1px solid #d4d4d8; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); overflow:hidden;">
+
+        <!-- TOP KPI BAND -->
+        <div style="display:flex; align-items:stretch; height:66px; background:#fafafa; border-bottom:1px solid #e4e4e7;">
+          <div style="display:flex; align-items:center; gap:10px; padding:0 18px; border-right:1px solid #e4e4e7;">
+            <div style="width:22px; height:22px; border-radius:6px; background:#18181b; display:flex; align-items:center; justify-content:center; color:#fff; font:700 10px/1 ui-monospace;">CC</div>
+            <div><div style="font:600 13px/1.2 system-ui; color:#18181b;">treuil-service-projet</div><div style="font:400 10px/1.2 ui-monospace; color:#a1a1aa;">9f3a… · Auth : sessions + tokens</div></div>
+          </div>
+          <div style="flex:1; display:flex; align-items:center;">
+            <div style="flex:1; text-align:center; padding:0 6px;"><div style="font:700 18px/1 system-ui; color:#1d4ed8;">3</div><div style="font:500 9px/1 system-ui; color:#71717a; margin-top:3px;">agents actifs</div></div>
+            <div style="width:1px; height:30px; background:#ececee;"></div>
+            <div style="flex:1; text-align:center; padding:0 6px;"><div style="font:700 18px/1 system-ui; color:#16a34a;">3</div><div style="font:500 9px/1 system-ui; color:#71717a; margin-top:3px;">terminés</div></div>
+            <div style="width:1px; height:30px; background:#ececee;"></div>
+            <div style="flex:1; text-align:center; padding:0 6px;"><div style="font:700 18px/1 system-ui; color:#b91c1c;">1</div><div style="font:500 9px/1 system-ui; color:#b91c1c; margin-top:3px;">échec</div></div>
+            <div style="width:1px; height:30px; background:#ececee;"></div>
+            <div style="flex:1; text-align:center; padding:0 6px;"><div style="font:700 18px/1 ui-monospace; color:#27272a;">12:31</div><div style="font:500 9px/1 system-ui; color:#71717a; margin-top:3px;">temps écoulé</div></div>
+            <div style="width:1px; height:30px; background:#ececee;"></div>
+            <div style="flex:1; text-align:center; padding:0 6px;"><div style="font:700 18px/1 ui-monospace; color:#27272a;">11<span style="color:#16a34a;">✓</span> 2<span style="color:#dc2626;">✕</span></div><div style="font:500 9px/1 system-ui; color:#71717a; margin-top:3px;">gates PASS / FAIL</div></div>
+          </div>
+          <div style="display:flex; align-items:center; padding:0 18px; border-left:1px solid #e4e4e7;">
+            <span style="display:inline-flex; align-items:center; gap:6px; font:600 12px/1 system-ui; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:999px; padding:6px 11px;"><span style="width:7px;height:7px;border-radius:50%;background:#22c55e;animation:ccpulse 1.4s ease-in-out infinite;"></span>Live</span>
+          </div>
+        </div>
+
+        <!-- BODY -->
+        <div style="display:flex; height:792px;">
+
+          <!-- LEFT RAIL: tree -->
+          <div style="width:280px; flex:none; border-right:1px solid #e4e4e7; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+              <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Topologie</span>
+              <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F1</span>
+            </div>
+            <div style="flex:1; min-height:0; overflow:hidden; padding:10px;">
+              <div style="display:flex; align-items:center; gap:7px; padding:6px 8px; border:1px solid #e4e4e7; border-radius:6px;">
+                <span style="width:7px;height:7px;border-radius:50%;background:#2563eb;flex:none;animation:ccpulse 1.4s ease-in-out infinite;"></span><span style="font:600 11px/1 ui-monospace; color:#18181b;">agent principal</span>
+              </div>
+              <div style="margin-left:8px; border-left:1.5px solid #e4e4e7;">
+                <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:3px 0; border:1px solid #e4e4e7; border-radius:6px;"><span style="color:#16a34a;font:700 9px/1 ui-monospace;width:9px;text-align:center;flex:none;">✓</span><span style="font:600 10px/1 ui-monospace; color:#3f3f46;">bootstrap-lead</span></div></div>
+                <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:3px 0; border:1px solid #e4e4e7; border-radius:6px;"><span style="width:7px;height:7px;border-radius:50%;background:#2563eb;flex:none;animation:ccpulse 1.4s ease-in-out infinite;"></span><span style="font:600 10px/1 ui-monospace; color:#18181b;">auth-sessions-lead</span></div></div>
+                <div style="margin-left:8px; border-left:1.5px solid #e4e4e7;">
+                  <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; padding:3px 7px; margin:3px 0; font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa;">Lot 1 · 5 ∥</div></div>
+                  <div style="margin-left:8px; border-left:1.5px solid #eef0fb;">
+                    <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:2px 0; border:1px solid #e4e4e7; border-radius:6px;"><span style="width:7px;height:7px;border-radius:50%;background:#2563eb;flex:none;animation:ccpulse 1.4s ease-in-out infinite;"></span><span style="font:600 10px/1 ui-monospace; color:#3f3f46;">W1-backend</span></div></div>
+                    <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:2px 0; border:1px solid #e4e4e7; border-radius:6px;"><span style="width:7px;height:7px;border-radius:50%;background:#2563eb;flex:none;animation:ccpulse 1.4s ease-in-out infinite;"></span><span style="font:600 10px/1 ui-monospace; color:#3f3f46;">W2-frontend</span></div></div>
+                    <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#93c5fd;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:2px 0; border:1px solid #2563eb; border-radius:6px; background:#f8faff; box-shadow:0 0 0 1px #2563eb;"><span style="color:#16a34a;font:700 9px/1 ui-monospace;width:9px;text-align:center;flex:none;">✓</span><span style="font:700 10px/1 ui-monospace; color:#1d4ed8;">W3-docker</span><div style="flex:1;"></div><span style="font:500 8px/1 ui-monospace; color:#2563eb;">1m 58s</span></div></div>
+                    <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:2px 0; border:1px solid #e4e4e7; border-radius:6px;"><span style="color:#16a34a;font:700 9px/1 ui-monospace;width:9px;text-align:center;flex:none;">✓</span><span style="font:600 10px/1 ui-monospace; color:#3f3f46;">W4-db-migrate</span></div></div>
+                    <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#fecaca;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:2px 0; border:1px solid #fca5a5; border-radius:6px; background:#fef2f2;"><span style="color:#dc2626;font:700 9px/1 ui-monospace;width:9px;text-align:center;flex:none;">✕</span><span style="font:700 10px/1 ui-monospace; color:#b91c1c;">W5-api-contract</span></div></div>
+                  </div>
+                  <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; padding:3px 7px; margin:3px 0; font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa;">Lot 2 · en file</div></div>
+                  <div style="margin-left:8px; border-left:1.5px dashed #e4e4e7;">
+                    <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:2px 0; border:1px dashed #d4d4d8; border-radius:6px; background:#fafafa;"><span style="width:7px;height:7px;border-radius:50%;border:1.5px solid #c4c4c8;flex:none;"></span><span style="font:500 10px/1 ui-monospace; color:#a1a1aa;">W6-security-review</span></div></div>
+                    <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:2px 0; border:1px dashed #d4d4d8; border-radius:6px; background:#fafafa;"><span style="width:7px;height:7px;border-radius:50%;border:1.5px solid #c4c4c8;flex:none;"></span><span style="font:500 10px/1 ui-monospace; color:#a1a1aa;">W7-tests</span></div></div>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center;"><div style="width:10px;height:1.5px;background:#e4e4e7;"></div><div style="flex:1; display:flex; align-items:center; gap:6px; padding:5px 7px; margin:3px 0; border:1px dashed #d4d4d8; border-radius:6px; background:#fafafa;"><span style="width:7px;height:7px;border-radius:50%;border:1.5px solid #c4c4c8;flex:none;"></span><span style="font:500 10px/1 ui-monospace; color:#a1a1aa;">verifier</span></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MAIN -->
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+            <!-- F2 TIMELINE full-width -->
+            <div style="height:208px; flex:none; border-bottom:1px solid #e4e4e7; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 16px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Timeline chronologique · agents parallèles</span>
+                <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F2</span>
+                <div style="flex:1;"></div>
+                <span style="font:500 10px/1 ui-monospace; color:#a1a1aa;">agent_start ▸ agent_stop · success</span>
+              </div>
+              <div style="flex:1; min-height:0; overflow:hidden; padding:12px 16px 8px; display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; align-items:center; gap:10px;"><span style="width:120px; flex:none; font:500 10px/1 ui-monospace; color:#52525b;">bootstrap-lead</span><div style="flex:1; position:relative; height:14px;"><div style="position:absolute; left:0; width:32%; top:2px; height:10px; border-radius:3px; background:#dcfce7; border:1px solid #86efac; display:flex; align-items:center; justify-content:flex-end; padding-right:4px;"><span style="font:600 7px/1 ui-monospace; color:#15803d;">✓</span></div></div></div>
+                <div style="display:flex; align-items:center; gap:10px;"><span style="width:120px; flex:none; font:500 10px/1 ui-monospace; color:#18181b;">auth-sessions-lead</span><div style="flex:1; position:relative; height:14px;"><div style="position:absolute; left:34%; right:0; top:2px; height:10px; border-radius:3px; background:#dbeafe; border:1px solid #93c5fd;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:6px; margin:2px 0;"><span style="width:120px;flex:none;"></span><div style="flex:1; position:relative; height:13px;"><div style="position:absolute; left:54%; right:0; top:0; border-left:1.5px dashed #c4b5fd; border-right:1.5px dashed #c4b5fd; height:104px; "></div><div style="position:absolute; left:54%; top:0; font:600 8px/1 ui-monospace; text-transform:uppercase; color:#7c3aed; padding-left:5px;">Lot 1 · 5 workers en parallèle</div></div></div>
+                <div style="display:flex; align-items:center; gap:10px;"><span style="width:120px; flex:none; font:600 10px/1 ui-monospace; color:#1d4ed8;">W3-docker ◆</span><div style="flex:1; position:relative; height:14px;"><div style="position:absolute; left:55%; width:18%; top:2px; height:10px; border-radius:3px; background:#bfdbfe; border:1.5px solid #2563eb; box-shadow:0 0 0 2px #eff6ff;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:10px;"><span style="width:120px; flex:none; font:500 10px/1 ui-monospace; color:#52525b;">W4-db-migrate</span><div style="flex:1; position:relative; height:14px;"><div style="position:absolute; left:56%; width:9%; top:2px; height:10px; border-radius:3px; background:#dcfce7; border:1px solid #86efac;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:10px;"><span style="width:120px; flex:none; font:600 10px/1 ui-monospace; color:#b91c1c;">W5-api-contract</span><div style="flex:1; position:relative; height:14px;"><div style="position:absolute; left:55%; width:13%; top:2px; height:10px; border-radius:3px; background:#fee2e2; border:1px solid #f87171; display:flex; align-items:center; justify-content:flex-end; padding-right:4px;"><span style="font:600 7px/1 ui-monospace; color:#b91c1c;">✕</span></div></div></div>
+                <div style="display:flex; align-items:center; gap:10px;"><span style="width:120px; flex:none; font:500 10px/1 ui-monospace; color:#52525b;">W1-backend</span><div style="flex:1; position:relative; height:14px;"><div style="position:absolute; left:57%; right:0; top:2px; height:10px; border-radius:3px; background:#dbeafe; border:1px solid #93c5fd;"></div></div></div>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:2px;"><span style="width:120px;flex:none;"></span><div style="flex:1; display:flex; justify-content:space-between; font:500 9px/1 ui-monospace; color:#bcbcc0; border-top:1px solid #ededee; padding-top:4px;"><span>t0 · 13:54</span><span>+4m</span><span>+8m</span><span style="color:#2563eb;">12:31 · live ▸</span></div></div>
+              </div>
+            </div>
+            <!-- F3 | F4 side by side -->
+            <div style="flex:1; min-height:0; display:flex;">
+              <!-- F3 -->
+              <div style="flex:1; min-width:0; border-right:1px solid #e4e4e7; display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; gap:8px; padding:9px 14px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+                  <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Raisonnement</span>
+                  <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F3</span>
+                  <div style="flex:1;"></div>
+                  <span style="display:inline-flex; align-items:center; gap:5px; font:500 10px/1 system-ui; color:#15803d;"><span style="font:700 9px/1 ui-monospace;">✓</span>W3-docker · terminé</span>
+                </div>
+                <div style="flex:1; min-height:0; overflow:hidden; padding:13px 14px; display:flex; flex-direction:column; gap:10px;">
+                  <div style="border-left:2px solid #c4b5fd; padding-left:11px;"><div style="font:600 9px/1 ui-monospace; text-transform:uppercase; color:#7c3aed; margin-bottom:5px;">thinking</div><div style="display:flex;flex-direction:column;gap:5px;"><div style="height:7px;border-radius:4px;background:#ededee;width:94%;"></div><div style="height:7px;border-radius:4px;background:#ededee;width:82%;"></div><div style="height:7px;border-radius:4px;background:#ededee;width:67%;"></div></div></div>
+                  <div style="border-left:2px solid #cbd5e1; padding-left:11px;"><div style="font:600 9px/1 ui-monospace; text-transform:uppercase; color:#475569; margin-bottom:5px;">text · réponse</div><div style="display:flex;flex-direction:column;gap:5px;"><div style="height:7px;border-radius:4px;background:#e8e8ea;width:88%;"></div><div style="height:7px;border-radius:4px;background:#e8e8ea;width:55%;"></div></div></div>
+                  <div style="border-left:2px solid #c4b5fd; padding-left:11px;"><div style="display:flex; align-items:center; gap:6px; margin-bottom:5px;"><span style="font:600 9px/1 ui-monospace; text-transform:uppercase; color:#7c3aed;">thinking</span><span style="font:400 9px/1 ui-monospace; color:#a1a1aa;">bloc long · 4,2k car.</span><span style="font:500 9px/1 system-ui; color:#2563eb; cursor:pointer;">déplier ▾</span></div><div style="display:flex;flex-direction:column;gap:5px;"><div style="height:7px;border-radius:4px;background:#ededee;width:96%;"></div><div style="height:7px;border-radius:4px;background:#f4f4f5;width:30%;"></div></div></div>
+                </div>
+              </div>
+              <!-- F4 -->
+              <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; gap:8px; padding:9px 14px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+                  <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Activité outils</span>
+                  <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F4</span>
+                  <span style="font:600 9px/1 ui-monospace; color:#3f3f46; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:3px; padding:2px 5px;">31 appels</span>
+                </div>
+                <div style="flex:1; min-height:0; overflow:hidden; padding:9px 12px; display:flex; flex-direction:column; gap:5px;">
+                  <div style="display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid #e4e4e7; border-radius:6px;"><span style="font:600 9px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Write</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Dockerfile</span><span style="font:600 9px/1 ui-monospace; color:#15803d;">✓</span></div>
+                  <div style="display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid #e4e4e7; border-radius:6px;"><span style="font:600 9px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Write</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">docker-compose.yml</span><span style="font:600 9px/1 ui-monospace; color:#15803d;">✓</span></div>
+                  <div style="display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid #e4e4e7; border-radius:6px;"><span style="font:600 9px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Bash</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">docker build -t app .</span><span style="font:600 9px/1 ui-monospace; color:#15803d;">✓</span></div>
+                  <div style="border:1px solid #e4e4e7; border-radius:6px; overflow:hidden;"><div style="display:flex; align-items:center; gap:8px; padding:7px 9px;"><span style="font:600 9px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Bash</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">hadolint Dockerfile</span><span style="font:600 9px/1 ui-monospace; color:#15803d;">✓</span></div><div style="border-top:1px dashed #ececee; background:#fbfbfb; padding:7px 11px;"><div style="font:600 7px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa; margin-bottom:5px;">tool_result</div><div style="display:flex;flex-direction:column;gap:4px;"><div style="height:6px;border-radius:3px;background:#e8e8ea;width:80%;"></div></div></div></div>
+                  <div style="display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid #e4e4e7; border-radius:6px;"><span style="font:600 9px/1 ui-monospace; color:#5b21b6; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Agent</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">dispatch → verifier</span><span style="font:400 9px/1 ui-monospace; color:#a1a1aa;">→</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT DRAWER: F5 report -->
+          <div style="width:358px; flex:none; border-left:1px solid #d4d4d8; display:flex; flex-direction:column; box-shadow:-6px 0 16px rgba(0,0,0,.04);">
+            <div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+              <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Rapport</span>
+              <span style="font:600 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #e4e4e7; border-radius:3px; padding:2px 4px;">F5</span>
+              <div style="flex:1;"></div>
+              <span style="font:500 10px/1 ui-monospace; color:#71717a;">auth-sessions__docker.md</span>
+              <span style="font:500 12px/1 system-ui; color:#a1a1aa; cursor:pointer;">✕</span>
+            </div>
+            <div style="flex:1; min-height:0; overflow:hidden; padding:16px 16px;">
+              <!-- verdict highlighted top -->
+              <div style="display:flex; align-items:center; gap:8px; padding:9px 11px; border:1px solid #bbf7d0; border-radius:7px; background:#f0fdf4; margin:0 0 14px;">
+                <span style="width:22px;height:22px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px/1 ui-monospace;flex:none;">✓</span>
+                <div><div style="font:700 11px/1.2 system-ui; color:#15803d; text-transform:uppercase; letter-spacing:.04em;">Verdict</div><div style="font:500 12px/1.3 system-ui; color:#166534; margin-top:2px;">Prêt à merger — image build OK, lint clean</div></div>
+              </div>
+              <!-- title -->
+              <div style="font:700 16px/1.25 system-ui; color:#18181b; margin:0 0 8px;">Docker — conteneurisation service</div>
+              <!-- meta -->
+              <div style="display:flex; flex-wrap:wrap; gap:5px; margin:0 0 14px;">
+                <span style="font:500 9px/1 ui-monospace; color:#52525b; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:4px; padding:3px 6px;">branch auth-sessions</span>
+                <span style="font:500 9px/1 ui-monospace; color:#52525b; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:4px; padding:3px 6px;">role docker</span>
+                <span style="font:500 9px/1 ui-monospace; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:3px 6px;">commit a3f9c2</span>
+              </div>
+              <!-- section heading -->
+              <div style="font:600 10px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#71717a; margin:0 0 8px;">Preuves de gates</div>
+              <!-- gates table -->
+              <div style="border:1px solid #e4e4e7; border-radius:7px; overflow:hidden; margin:0 0 14px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:7px 10px; background:#fbfbfb; border-bottom:1px solid #ececee;"><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa;">Gate</span><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa;">Result</span><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa;">Evidence</span></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:8px 10px; border-bottom:1px solid #f1f1f2; align-items:center;"><span style="font:600 11px/1 ui-monospace; color:#3f3f46;">Hadolint</span><span style="font:400 10px/1 ui-monospace; color:#71717a;">0 issues</span><span style="font:700 9px/1 ui-monospace; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:3px 6px;">PASS</span></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:8px 10px; border-bottom:1px solid #f1f1f2; align-items:center;"><span style="font:600 11px/1 ui-monospace; color:#3f3f46;">Build</span><span style="font:400 10px/1 ui-monospace; color:#71717a;">image 184 MB</span><span style="font:700 9px/1 ui-monospace; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:3px 6px;">PASS</span></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:8px 10px; align-items:center;"><span style="font:600 11px/1 ui-monospace; color:#3f3f46;">Trivy</span><span style="font:400 10px/1 ui-monospace; color:#71717a;">0 HIGH/CRIT</span><span style="font:700 9px/1 ui-monospace; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:3px 6px;">PASS</span></div>
+              </div>
+              <!-- body markdown -->
+              <div style="font:600 10px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#71717a; margin:0 0 8px;">Fichiers créés</div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; align-items:center; gap:7px;"><span style="font:600 9px/1 ui-monospace; color:#16a34a;">+</span><span style="font:500 11px/1 ui-monospace; color:#3f3f46;">Dockerfile</span></div>
+                <div style="display:flex; align-items:center; gap:7px;"><span style="font:600 9px/1 ui-monospace; color:#16a34a;">+</span><span style="font:500 11px/1 ui-monospace; color:#3f3f46;">docker-compose.yml</span></div>
+                <div style="display:flex; align-items:center; gap:7px;"><span style="font:600 9px/1 ui-monospace; color:#16a34a;">+</span><span style="font:500 11px/1 ui-monospace; color:#3f3f46;">.dockerignore</span></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ÉTATS DÉTAILLÉS ============ -->
+  <div style="margin:0 0 20px;">
+    <div style="font:600 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.1em; text-transform:uppercase; color:#3f3f46; margin:0 0 5px;">États détaillés &amp; cas limites</div>
+    <div style="font:400 13px/1.5 system-ui; color:#71717a; margin:0 0 22px; max-width:760px;">Les états qui ne reposent pas uniquement sur la couleur (glyphe + libellé) et que l'utilisateur ne doit pas avoir à chercher : remontée des échecs, flux long virtualisé, connexion, raisonnement masqué.</div>
+    <div style="display:flex; gap:48px; align-items:flex-start;">
+
+      <!-- A. Remontée des échecs / drill-in -->
+      <div style="flex:none; width:720px;">
+        <div style="font:600 11px/1.3 ui-monospace; letter-spacing:.04em; color:#52525b; text-transform:uppercase; margin:0 0 9px; display:flex; gap:8px; align-items:center;">Remontée des échecs · drill-in agent<span style="font:500 9px/1 ui-monospace; color:#b91c1c; border:1px solid #fecaca; background:#fef2f2; border-radius:3px; padding:2px 4px; text-transform:none;">priorité</span></div>
+        <div style="background:#fff; border:1px solid #e4e4e7; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); overflow:hidden;">
+          <!-- alert banner -->
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 14px; background:#fef2f2; border-bottom:1px solid #fecaca;">
+            <span style="width:22px;height:22px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font:700 12px/1 ui-monospace;flex:none;">!</span>
+            <div style="flex:1;"><div style="font:700 13px/1.2 system-ui; color:#b91c1c;">1 échec dans la session</div><div style="font:500 11px/1.3 system-ui; color:#dc2626; margin-top:2px;">W5-api-contract · agent_stop success:false · gate FAIL</div></div>
+            <button style="background:#dc2626; color:#fff; border:0; border-radius:5px; padding:7px 11px; font:600 11px/1 system-ui; cursor:pointer;">Voir l'échec</button>
+          </div>
+          <!-- agent header -->
+          <div style="display:flex; align-items:center; gap:9px; padding:12px 16px; border-bottom:1px solid #ececee;">
+            <span style="color:#dc2626;font:700 13px/1 ui-monospace;">✕</span>
+            <span style="font:700 14px/1 ui-monospace; color:#b91c1c;">W5-api-contract</span>
+            <span style="font:500 11px/1 system-ui; color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; border-radius:999px; padding:4px 9px;">Échec · failed</span>
+            <div style="flex:1;"></div>
+            <span style="font:400 11px/1 ui-monospace; color:#a1a1aa;">agent 4f0a9c · arrêt +1m 02s</span>
+          </div>
+          <div style="padding:14px 16px; display:flex; gap:16px;">
+            <!-- left: failing tool -->
+            <div style="flex:1;">
+              <div style="font:600 9px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#71717a; margin:0 0 8px;">Dernier appel outil · échec</div>
+              <div style="border:1px solid #fca5a5; border-radius:6px; overflow:hidden; margin:0 0 12px;">
+                <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:#fef6f6;"><span style="font:600 10px/1 ui-monospace; color:#1e293b; background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:3px 6px; flex:none;">Bash</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1;">openapi-spec-validator api.yaml</span><span style="font:600 9px/1 ui-monospace; color:#b91c1c;">exit 1</span></div>
+                <div style="border-top:1px dashed #fecaca; background:#fff; padding:9px 11px;"><div style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#dc2626; margin-bottom:6px;">tool_result · stderr</div><div style="display:flex;flex-direction:column;gap:4px;"><div style="height:6px;border-radius:3px;background:#fee2e2;width:88%;"></div><div style="height:6px;border-radius:3px;background:#fee2e2;width:64%;"></div></div></div>
+              </div>
+              <div style="font:600 9px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#71717a; margin:0 0 8px;">Verdict</div>
+              <div style="display:flex; align-items:center; gap:8px; padding:9px 11px; border:1px solid #fecaca; border-radius:7px; background:#fef2f2;">
+                <span style="width:20px;height:20px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font:700 10px/1 ui-monospace;flex:none;">✕</span>
+                <div style="font:600 12px/1.3 system-ui; color:#b91c1c;">Bloquant — contrat OpenAPI invalide</div>
+              </div>
+            </div>
+            <!-- right: report gates -->
+            <div style="flex:1;">
+              <div style="font:600 9px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#71717a; margin:0 0 8px;">Rapport · auth-sessions__api-contract.md</div>
+              <div style="border:1px solid #e4e4e7; border-radius:7px; overflow:hidden;">
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:7px 10px; background:#fbfbfb; border-bottom:1px solid #ececee;"><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa;">Gate</span><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa;">Result</span><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa;">Evid.</span></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:8px 10px; border-bottom:1px solid #f1f1f2; align-items:center;"><span style="font:600 10px/1 ui-monospace; color:#3f3f46;">Ruff</span><span style="font:400 10px/1 ui-monospace; color:#71717a;">All passed</span><span style="font:700 9px/1 ui-monospace; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:3px 6px;">PASS</span></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:8px 10px; border-bottom:1px solid #f1f1f2; align-items:center; background:#fef6f6;"><span style="font:700 10px/1 ui-monospace; color:#b91c1c;">OpenAPI</span><span style="font:400 10px/1 ui-monospace; color:#b91c1c;">3 errors</span><span style="font:700 9px/1 ui-monospace; color:#fff; background:#dc2626; border-radius:4px; padding:3px 6px;">FAIL</span></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:8px 10px; align-items:center;"><span style="font:600 10px/1 ui-monospace; color:#3f3f46;">Pytest</span><span style="font:400 10px/1 ui-monospace; color:#71717a;">skipped</span><span style="font:700 9px/1 ui-monospace; color:#71717a; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:4px; padding:3px 6px;">—</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. Contenu très long / virtualisation -->
+      <div style="flex:none; width:560px;">
+        <div style="font:600 11px/1.3 ui-monospace; letter-spacing:.04em; color:#52525b; text-transform:uppercase; margin:0 0 9px; display:flex; gap:8px; align-items:center;">Contenu très long · virtualisation<span style="font:500 9px/1 ui-monospace; color:#a1a1aa; border:1px solid #d4d4d8; border-radius:3px; padding:2px 4px; text-transform:none;">F4 · perf</span></div>
+        <div style="background:#fff; border:1px solid #e4e4e7; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); overflow:hidden; height:438px; display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fbfbfb; border-bottom:1px solid #ececee;">
+            <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#3f3f46;">Activité outils</span>
+            <span style="font:600 9px/1 ui-monospace; color:#3f3f46; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:3px; padding:2px 5px;">78 appels</span>
+            <div style="flex:1;"></div>
+            <span style="font:500 9px/1 ui-monospace; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:3px; padding:2px 5px;">virtualisé · 14 rendus</span>
+          </div>
+          <div style="flex:1; min-height:0; overflow:hidden; padding:10px 12px; display:flex; flex-direction:column; gap:5px; position:relative;">
+            <div style="display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid #e4e4e7; border-radius:6px;"><span style="font:600 9px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Read</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">app/models/__init__.py</span></div>
+            <!-- long expanded output -->
+            <div style="border:1px solid #e4e4e7; border-radius:6px; overflow:hidden;">
+              <div style="display:flex; align-items:center; gap:8px; padding:7px 9px;"><span style="font:600 9px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Bash</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">pytest -vv tests/</span><span style="font:600 9px/1 ui-monospace; color:#15803d;">✓</span></div>
+              <div style="border-top:1px dashed #ececee; background:#fbfbfb; padding:9px 11px;">
+                <div style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#a1a1aa; margin-bottom:6px;">tool_result · sortie volumineuse</div>
+                <div style="display:flex;flex-direction:column;gap:4px;"><div style="height:6px;border-radius:3px;background:#e8e8ea;width:92%;"></div><div style="height:6px;border-radius:3px;background:#e8e8ea;width:84%;"></div><div style="height:6px;border-radius:3px;background:#e8e8ea;width:88%;"></div><div style="height:6px;border-radius:3px;background:#e8e8ea;width:60%;"></div></div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:9px; padding-top:8px; border-top:1px dashed #e4e4e7;"><span style="font:500 9px/1 ui-monospace; color:#a1a1aa;">tronqué · 12 400 lignes</span><span style="font:600 9px/1 system-ui; color:#2563eb; cursor:pointer;">Afficher tout ▾</span></div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid #e4e4e7; border-radius:6px;"><span style="font:600 9px/1 ui-monospace; color:#5b21b6; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Edit</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">app/api/routes.py · +88 −12</span></div>
+            <div style="display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid #e4e4e7; border-radius:6px; opacity:.6;"><span style="font:600 9px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Read</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">app/api/schemas.py</span></div>
+            <div style="display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid #e4e4e7; border-radius:6px; opacity:.3;"><span style="font:600 9px/1 ui-monospace; color:#1e293b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:3px 5px; flex:none; width:42px; text-align:center;">Bash</span><span style="font:500 10px/1.3 ui-monospace; color:#3f3f46; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ruff check app/</span></div>
+            <!-- scrollbar hint -->
+            <div style="position:absolute; right:4px; top:12px; bottom:12px; width:4px; border-radius:2px; background:#f1f1f2;"><div style="position:absolute; top:0; height:34%; width:4px; border-radius:2px; background:#cbd5e1;"></div></div>
+          </div>
+          <div style="padding:8px 14px; border-top:1px solid #ececee; background:#fbfbfb; font:500 9px/1 ui-monospace; color:#a1a1aa; display:flex; justify-content:space-between;"><span>fenêtre virtuelle · 14 / 78 rendus</span><span>chargement progressif au défilement</span></div>
+        </div>
+      </div>
+
+      <!-- C. Column of mini states -->
+      <div style="flex:none; width:380px; display:flex; flex-direction:column; gap:22px;">
+
+        <!-- connexion en cours -->
+        <div>
+          <div style="font:600 11px/1.3 ui-monospace; letter-spacing:.04em; color:#52525b; text-transform:uppercase; margin:0 0 9px;">Connexion en cours</div>
+          <div style="background:#fff; border:1px solid #e4e4e7; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:9px; height:42px; padding:0 14px; background:#fafafa; border-bottom:1px solid #ececee;"><div style="width:16px; height:16px; border-radius:5px; background:#18181b;"></div><span style="font:600 12px/1 system-ui; color:#18181b;">CC-monitor</span></div>
+            <div style="padding:26px 16px; display:flex; align-items:center; gap:12px; justify-content:center;">
+              <div style="width:20px; height:20px; border:2.5px solid #e4e4e7; border-top-color:#2563eb; border-radius:50%; animation:ccspin .8s linear infinite;"></div>
+              <div><div style="font:600 12px/1.2 system-ui; color:#27272a;">Connexion au flux SSE…</div><div style="font:400 10px/1.3 ui-monospace; color:#a1a1aa; margin-top:2px;">/events · session 9f3a…</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- connexion perdue / reconnexion -->
+        <div>
+          <div style="font:600 11px/1.3 ui-monospace; letter-spacing:.04em; color:#52525b; text-transform:uppercase; margin:0 0 9px;">Connexion perdue · reconnexion</div>
+          <div style="background:#fff; border:1px solid #fde68a; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 14px; background:#fffbeb;">
+              <span style="width:18px;height:18px;border-radius:50%;border:2.5px solid #fcd34d;border-top-color:#d97706;animation:ccspin .9s linear infinite;flex:none;"></span>
+              <div style="flex:1;"><div style="font:600 12px/1.2 system-ui; color:#92400e;">Flux interrompu — reconnexion…</div><div style="font:400 10px/1.3 system-ui; color:#b45309; margin-top:2px;">tentative 2 · données figées il y a 8 s</div></div>
+            </div>
+            <div style="padding:10px 14px; display:flex; flex-direction:column; gap:6px; opacity:.5; filter:grayscale(.4);">
+              <div style="height:7px;border-radius:4px;background:#e8e8ea;width:80%;"></div>
+              <div style="height:7px;border-radius:4px;background:#e8e8ea;width:62%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- raisonnement masqué -->
+        <div>
+          <div style="font:600 11px/1.3 ui-monospace; letter-spacing:.04em; color:#52525b; text-transform:uppercase; margin:0 0 9px;">Raisonnement masqué</div>
+          <div style="background:#fff; border:1px solid #e4e4e7; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); padding:12px 14px;">
+            <div style="display:flex; align-items:center; gap:9px; padding:10px 12px; border:1px dashed #d4d4d8; border-radius:6px; background:repeating-linear-gradient(135deg,#fafafa,#fafafa 6px,#f4f4f5 6px,#f4f4f5 12px);">
+              <span style="font:400 14px/1 system-ui; color:#a1a1aa;">🔒</span>
+              <div><div style="font:600 11px/1.3 system-ui; color:#52525b;">Raisonnement masqué</div><div style="font:400 10px/1.3 ui-monospace; color:#a1a1aa;">redacted_thinking · chiffré, non lisible</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- états agent sélectionné -->
+        <div>
+          <div style="font:600 11px/1.3 ui-monospace; letter-spacing:.04em; color:#52525b; text-transform:uppercase; margin:0 0 9px;">État de l'agent sélectionné</div>
+          <div style="background:#fff; border:1px solid #e4e4e7; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); padding:12px 14px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #bfdbfe; border-radius:6px; background:#f8faff;"><span style="width:8px;height:8px;border-radius:50%;background:#2563eb;animation:ccpulse 1.4s ease-in-out infinite;flex:none;"></span><span style="font:600 11px/1 ui-monospace; color:#1d4ed8;">W1-backend</span><div style="flex:1;"></div><span style="font:600 10px/1 system-ui; color:#1d4ed8;">En cours</span></div>
+            <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #bbf7d0; border-radius:6px; background:#f0fdf4;"><span style="color:#16a34a;font:700 10px/1 ui-monospace;width:9px;text-align:center;flex:none;">✓</span><span style="font:600 11px/1 ui-monospace; color:#15803d;">W3-docker</span><div style="flex:1;"></div><span style="font:600 10px/1 system-ui; color:#15803d;">Terminé</span></div>
+            <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #fecaca; border-radius:6px; background:#fef2f2;"><span style="color:#dc2626;font:700 10px/1 ui-monospace;width:9px;text-align:center;flex:none;">✕</span><span style="font:600 11px/1 ui-monospace; color:#b91c1c;">W5-api-contract</span><div style="flex:1;"></div><span style="font:600 10px/1 system-ui; color:#b91c1c;">Échec</span></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <div data-end style="height:1px;"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

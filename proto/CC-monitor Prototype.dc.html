@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@keyframes ccpulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+@keyframes ccspin { to { transform: rotate(360deg) } }
+@keyframes ccblink { 0%,100%{opacity:1} 50%{opacity:0} }
+* { box-sizing:border-box; }
+</style>
+</helmet>
+
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; width:max-content; min-width:100%; min-height:100vh; box-sizing:border-box; background:#E1E3E6; color:#5C6166; display:flex; align-items:flex-start; justify-content:center; padding:24px;">
+  <div style="width:1440px; flex:none; position:relative; background:#FCFCFC; border:1px solid #D9D8D7; border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,.12); overflow:hidden;">
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; top:64px; left:50%; transform:translateX(-50%); z-index:30; display:flex; align-items:center; gap:10px; padding:11px 16px; background:#F3F8E9; border:1px solid #DCEBB9; border-radius:9px; box-shadow:0 8px 24px rgba(22,163,74,.18);">
+        <span style="width:22px;height:22px;border-radius:50%;background:#6F9B1F;color:#FCFCFC;display:flex;align-items:center;justify-content:center;font:700 11px/1 ui-monospace;flex:none;">✓</span>
+        <div><div style="font:700 12px/1.2 system-ui; color:#5E8A0E;">W2-frontend a terminé sa tâche</div><div style="font:500 11px/1.3 system-ui; color:#4F7A0A; margin-top:2px;">Rapport disponible · gates ESLint · Vitest · Build → PASS</div></div>
+      </div>
+    </sc-if>
+
+    <!-- ============ F0 SCREEN ============ -->
+    <sc-if value="{{ isF0 }}" hint-placeholder-val="{{ true }}">
+      <div style="height:872px; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; gap:10px; height:52px; padding:0 16px; background:#F3F4F5; border-bottom:1px solid #E7E8E9; flex:none;">
+          <div style="width:20px; height:20px; border-radius:6px; background:#FA8D3E; display:flex; align-items:center; justify-content:center; color:#FCFCFC; font:700 10px/1 ui-monospace;">CC</div>
+          <span style="font:600 14px/1 system-ui; color:#3B4044;">CC-monitor</span>
+          <span style="font:500 9px/1 ui-monospace; color:#ABB0B6; border:1px solid #E7E8E9; border-radius:3px; padding:2px 4px;">lecture seule</span>
+          <span style="font:500 13px/1 system-ui; color:#ABB0B6;">/</span>
+          <span style="font:600 13px/1 system-ui; color:#787B80;">Sessions disponibles</span>
+          <div style="flex:1;"></div>
+          <div style="display:flex; align-items:center; gap:8px; background:#FCFCFC; border:1px solid #E7E8E9; border-radius:6px; padding:6px 10px; width:240px;">
+            <span style="color:#ABB0B6; font:400 12px/1 system-ui;">⌕</span>
+            <span style="font:400 12px/1 system-ui; color:#C5C8CC;">Filtrer par projet, titre…</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; padding:11px 18px; background:#E6F0FA; border-bottom:1px solid #CFE6F7; flex:none;">
+          <span style="width:7px;height:7px;border-radius:50%;background:#399EE6; animation:ccpulse 1.4s ease-in-out infinite;"></span>
+          <span style="font:500 12px/1.4 system-ui; color:#2B6FB0;">Session active détectée — <span style="font-family:ui-monospace;">treuil-service-projet · 9f3a…</span> « Auth : sessions + tokens »</span>
+          <div style="flex:1;"></div>
+          <button onClick="{{ enterActive }}" style="background:#3585C7; color:#FCFCFC; border:0; border-radius:5px; padding:8px 13px; font:600 12px/1 system-ui; cursor:pointer;">Observer cette session</button>
+        </div>
+        <div style="display:grid; grid-template-columns:1.7fr 0.9fr 1.5fr 0.95fr 1fr auto; gap:14px; align-items:center; padding:10px 22px; border-bottom:1px solid #E7E8E9; background:#F3F4F5; flex:none;">
+          <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#ABB0B6;">Projet · chemin</span>
+          <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#ABB0B6;">sessionId</span>
+          <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#ABB0B6;">Titre · ai-title</span>
+          <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#ABB0B6;">État</span>
+          <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#ABB0B6;">Dernière activité</span>
+          <span></span>
+        </div>
+        <div style="flex:1; overflow:auto;">
+          <sc-for list="{{ sessions }}" as="s" hint-placeholder-count="5">
+            <div onClick="{{ s.onOpen }}" style="{{ s.rowStyle }}">
+              <div><div style="font:500 13px/1.3 system-ui; color:#3B4044;">{{ s.project }}</div><div style="font:400 11px/1.3 ui-monospace; color:#ABB0B6;">{{ s.path }}</div></div>
+              <span style="font:500 12px/1 ui-monospace; color:#787B80;">{{ s.sid }}</span>
+              <span style="font:400 13px/1.3 system-ui; color:#5C6166;">{{ s.title }}</span>
+              <span style="{{ s.stateStyle }}"><span style="{{ s.stateDotStyle }}">{{ s.stateGlyph }}</span>{{ s.stateText }}</span>
+              <span style="font:400 12px/1 system-ui; color:#787B80;">{{ s.activity }}</span>
+              <button onClick="{{ s.onOpen }}" style="{{ s.btnStyle }}">Observer</button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ COCKPIT SCREEN ============ -->
+    <sc-if value="{{ isCockpit }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex; flex-direction:column;">
+
+        <!-- TOP BAR -->
+        <div style="display:flex; align-items:center; gap:14px; height:52px; padding:0 16px; background:#F3F4F5; border-bottom:1px solid #E7E8E9; flex:none;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:20px; height:20px; border-radius:6px; background:#FA8D3E; display:flex; align-items:center; justify-content:center; color:#FCFCFC; font:700 10px/1 ui-monospace;">CC</div>
+            <span style="font:600 14px/1 system-ui; color:#3B4044;">CC-monitor</span>
+          </div>
+          <button onClick="{{ back }}" style="display:flex; align-items:center; gap:7px; background:#FCFCFC; border:1px solid #E7E8E9; border-radius:7px; padding:6px 10px; cursor:pointer;">
+            <span style="font:500 12px/1 system-ui; color:#ABB0B6;">←</span>
+            <span style="font:600 12px/1 system-ui; color:#5C6166;">treuil-service-projet</span>
+            <span style="width:1px;height:12px;background:#D9D8D7;"></span>
+            <span style="font:500 12px/1 ui-monospace; color:#8A9199;">9f3a…</span>
+            <span style="font:400 12px/1 system-ui; color:#ABB0B6;">Auth : sessions + tokens</span>
+          </button>
+          <div style="flex:1;"></div>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <span style="display:inline-flex; align-items:center; gap:6px; font:500 12px/1 system-ui; color:#5C6166;"><span style="width:7px;height:7px;border-radius:50%;background:#399EE6;animation:ccpulse 1.4s ease-in-out infinite;"></span>{{ kpiActive }} actifs</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; font:500 12px/1 system-ui; color:#5C6166;"><span style="color:#6F9B1F;font:700 11px/1 ui-monospace;">✓</span>{{ kpiDone }} terminés</span>
+            <button onClick="{{ selectFail }}" style="display:inline-flex; align-items:center; gap:6px; font:600 12px/1 system-ui; color:#C44848; background:#FCEDED; border:1px solid #F5C9C9; border-radius:999px; padding:5px 10px; cursor:pointer;"><span style="font:700 10px/1 ui-monospace;">✕</span>{{ kpiFail }} échec</button>
+            <span style="width:1px;height:18px;background:#E7E8E9;"></span>
+            <span style="font:500 12px/1 ui-monospace; color:#787B80;">⏱ {{ elapsed }}</span>
+            <button onClick="{{ toggleLive }}" style="{{ liveBtnStyle }}"><span style="{{ liveDotStyle }}"></span>{{ liveLabel }}</button>
+          </div>
+        </div>
+
+        <!-- BODY -->
+        <div style="display:flex; height:806px;">
+
+          <!-- LEFT COLUMN -->
+          <div style="width:340px; flex:none; border-right:1px solid #E7E8E9; display:flex; flex-direction:column;">
+            <div style="flex:1; min-height:0; display:flex; flex-direction:column; border-bottom:1px solid #E7E8E9;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; background:#F3F4F5; border-bottom:1px solid #E7E8E9; flex:none;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#5C6166;">Topologie · arbre des agents</span>
+                <span style="font:600 9px/1 ui-monospace; color:#ABB0B6; border:1px solid #E7E8E9; border-radius:3px; padding:2px 4px;">F1</span>
+              </div>
+              <div style="flex:1; min-height:0; overflow:auto; padding:10px 12px;">
+                <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="13">
+                  <sc-if value="{{ n.isGroup }}" hint-placeholder-val="{{ false }}">
+                    <div style="{{ n.wrapStyle }}"><div style="display:flex; align-items:center; gap:6px; padding:4px 0;"><span style="font:600 9px/1 ui-monospace; letter-spacing:.04em; text-transform:uppercase; color:#ABB0B6;">{{ n.name }}</span><div style="flex:1; height:1px; background:#E7E8E9;"></div></div></div>
+                  </sc-if>
+                  <sc-if value="{{ n.isAgent }}" hint-placeholder-val="{{ true }}">
+                    <div style="{{ n.wrapStyle }}">
+                      <div onClick="{{ n.onSelect }}" style="{{ n.rowStyle }}">
+                        <sc-if value="{{ n.showDot }}" hint-placeholder-val="{{ true }}"><span style="{{ n.dotStyle }}"></span></sc-if>
+                        <sc-if value="{{ n.showGlyph }}" hint-placeholder-val="{{ false }}"><span style="{{ n.glyphStyle }}">{{ n.glyph }}</span></sc-if>
+                        <span style="{{ n.nameStyle }}">{{ n.name }}</span>
+                        <sc-if value="{{ n.hasRole }}" hint-placeholder-val="{{ false }}"><span style="font:400 10px/1 system-ui; color:#ABB0B6;">{{ n.role }}</span></sc-if>
+                        <div style="flex:1;"></div>
+                        <span style="{{ n.durStyle }}">{{ n.dur }}</span>
+                      </div>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+            <!-- F2 TIMELINE -->
+            <div style="height:218px; flex:none; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; background:#F3F4F5; border-bottom:1px solid #E7E8E9; flex:none;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#5C6166;">Timeline chronologique</span>
+                <span style="font:600 9px/1 ui-monospace; color:#ABB0B6; border:1px solid #E7E8E9; border-radius:3px; padding:2px 4px;">F2</span>
+              </div>
+              <div style="flex:1; min-height:0; padding:10px 12px; display:flex; flex-direction:column; gap:5px; overflow:hidden;">
+                <sc-for list="{{ timeline }}" as="t" hint-placeholder-count="7">
+                  <div onClick="{{ t.onSelect }}" style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                    <span style="{{ t.labelStyle }}">{{ t.label }}</span>
+                    <div style="flex:1; position:relative; height:13px;"><div style="{{ t.barStyle }}"></div></div>
+                  </div>
+                </sc-for>
+                <div style="display:flex; align-items:center; gap:6px; margin-top:auto;"><span style="width:64px;flex:none;"></span><div style="flex:1; display:flex; justify-content:space-between; font:500 8px/1 ui-monospace; color:#C5C8CC; border-top:1px solid #E7E8E9; padding-top:3px;"><span>t0</span><span>+6m</span><span>+12m</span><span style="color:#399EE6;">live ▸</span></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CENTER COLUMN -->
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; border-right:1px solid #E7E8E9;">
+            <div style="{{ selHeaderStyle }}">
+              <span style="font:600 9px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#A6AEBB;">Agent sélectionné</span>
+              <span style="{{ selNameStyle }}"><sc-if value="{{ sel.showDot }}" hint-placeholder-val="{{ true }}"><span style="{{ sel.dotStyle }}"></span></sc-if><sc-if value="{{ sel.showGlyph }}" hint-placeholder-val="{{ false }}"><span style="{{ sel.glyphStyle }}">{{ sel.glyph }}</span></sc-if>{{ sel.name }}</span>
+              <span style="{{ sel.badgeStyle }}">{{ sel.badgeText }}</span>
+              <span style="font:400 11px/1 ui-monospace; color:#ABB0B6;">{{ sel.agentId }}</span>
+              <div style="flex:1;"></div>
+              <span style="font:500 11px/1 system-ui; color:#8A9199;">Filtre F3 · F4 · F5</span>
+            </div>
+            <!-- F3 -->
+            <div style="height:336px; flex:none; display:flex; flex-direction:column; border-bottom:1px solid #E7E8E9;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 16px; background:#F3F4F5; border-bottom:1px solid #E7E8E9; flex:none;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#5C6166;">Raisonnement</span>
+                <span style="font:600 9px/1 ui-monospace; color:#ABB0B6; border:1px solid #E7E8E9; border-radius:3px; padding:2px 4px;">F3</span>
+                <div style="flex:1;"></div>
+                <span style="font:500 10px/1 system-ui; color:#ABB0B6;">{{ sel.reasoningMeta }}</span>
+              </div>
+              <div style="flex:1; min-height:0; overflow:auto; padding:14px 16px; display:flex; flex-direction:column; gap:11px;">
+                <sc-if value="{{ sel.reasoningEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#C5C8CC; padding:24px;">
+                    <div style="font:300 24px/1 system-ui; margin-bottom:8px;">◦</div>
+                    <div style="font:500 12px/1.4 system-ui; color:#ABB0B6;">{{ sel.emptyMsg }}</div>
+                  </div>
+                </sc-if>
+                <sc-for list="{{ sel.reasoning }}" as="b" hint-placeholder-count="3">
+                  <sc-if value="{{ b.isRedacted }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; align-items:center; gap:9px; padding:9px 11px; border:1px dashed #D9D8D7; border-radius:6px; background:repeating-linear-gradient(135deg,#F3F4F5,#F3F4F5 6px,#EFF0F1 6px,#EFF0F1 12px);">
+                      <span style="font:400 13px/1 system-ui; color:#ABB0B6;">🔒</span>
+                      <div><div style="font:600 11px/1.3 system-ui; color:#787B80;">Raisonnement masqué</div><div style="font:400 10px/1.3 ui-monospace; color:#ABB0B6;">redacted_thinking · chiffré, non lisible</div></div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ b.isText }}" hint-placeholder-val="{{ true }}">
+                    <div style="{{ b.barStyle }}">
+                      <div style="display:flex; align-items:center; gap:6px; margin:0 0 6px;"><span style="{{ b.labelStyle }}">{{ b.label }}</span><sc-if value="{{ b.streaming }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:4px;font:400 9px/1 ui-monospace; color:#399EE6;"><span style="width:5px;height:5px;border-radius:50%;background:#399EE6;animation:ccpulse 1.1s ease-in-out infinite;"></span>en réception…</span></sc-if></div>
+                      <div style="{{ b.textStyle }}">{{ b.text }}<sc-if value="{{ b.streaming }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block; width:7px; height:13px; background:#399EE6; margin-left:2px; vertical-align:middle; animation:ccblink 1s step-end infinite;"></span></sc-if></div>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+            <!-- F4 -->
+            <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 16px; background:#F3F4F5; border-bottom:1px solid #E7E8E9; flex:none;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#5C6166;">Activité outils</span>
+                <span style="font:600 9px/1 ui-monospace; color:#ABB0B6; border:1px solid #E7E8E9; border-radius:3px; padding:2px 4px;">F4</span>
+                <sc-if value="{{ sel.hasTools }}" hint-placeholder-val="{{ true }}"><span style="font:600 9px/1 ui-monospace; color:#5C6166; background:#EFF0F1; border:1px solid #E7E8E9; border-radius:3px; padding:2px 5px;">{{ sel.toolCount }} appels</span></sc-if>
+                <div style="flex:1;"></div>
+                <span style="font:500 10px/1 system-ui; color:#ABB0B6;">flux le plus volumineux · virtualisé</span>
+              </div>
+              <div style="flex:1; min-height:0; overflow:auto; padding:10px 12px; display:flex; flex-direction:column; gap:5px;">
+                <sc-if value="{{ sel.toolsEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#C5C8CC; padding:24px;">
+                    <div style="font:300 24px/1 system-ui; margin-bottom:8px;">◦</div>
+                    <div style="font:500 12px/1.4 system-ui; color:#ABB0B6;">Aucun appel outil pour le moment</div>
+                  </div>
+                </sc-if>
+                <sc-for list="{{ sel.tools }}" as="tl" hint-placeholder-count="5">
+                  <div style="{{ tl.rowStyle }}">
+                    <div style="display:flex; align-items:center; gap:9px; padding:8px 10px;">
+                      <span style="{{ tl.tagStyle }}">{{ tl.tool }}</span>
+                      <span style="font:500 11px/1.3 ui-monospace; color:#5C6166; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ tl.target }}</span>
+                      <span style="{{ tl.statusStyle }}">{{ tl.statusText }}</span>
+                    </div>
+                    <sc-if value="{{ tl.hasResult }}" hint-placeholder-val="{{ false }}">
+                      <div style="{{ tl.resultWrapStyle }}"><div style="{{ tl.resultLabelStyle }}">{{ tl.resultLabel }}</div><div style="font:400 11px/1.5 ui-monospace; color:#787B80; white-space:pre-wrap;">{{ tl.resultText }}</div></div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div style="width:384px; flex:none; display:flex; flex-direction:column;">
+            <div style="flex:none; display:flex; flex-direction:column; border-bottom:1px solid #E7E8E9;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#F3F4F5; border-bottom:1px solid #E7E8E9;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#5C6166;">Vue d'ensemble session</span>
+                <span style="font:600 9px/1 ui-monospace; color:#ABB0B6; border:1px solid #E7E8E9; border-radius:3px; padding:2px 4px;">F6</span>
+              </div>
+              <div style="padding:14px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin:0 0 12px;">
+                  <div style="border:1px solid #E7E8E9; border-radius:7px; padding:10px; text-align:center; background:#F0F6FC;"><div style="font:700 22px/1 system-ui; color:#3585C7;">{{ kpiActive }}</div><div style="font:500 9px/1.2 system-ui; color:#8A9199; margin-top:4px;">actifs</div></div>
+                  <div style="border:1px solid #E7E8E9; border-radius:7px; padding:10px; text-align:center;"><div style="font:700 22px/1 system-ui; color:#6F9B1F;">{{ kpiDone }}</div><div style="font:500 9px/1.2 system-ui; color:#8A9199; margin-top:4px;">terminés</div></div>
+                  <div style="border:1px solid #F5C9C9; border-radius:7px; padding:10px; text-align:center; background:#FCEDED;"><div style="font:700 22px/1 system-ui; color:#C44848;">{{ kpiFail }}</div><div style="font:500 9px/1.2 system-ui; color:#C44848; margin-top:4px;">échec</div></div>
+                  <div style="border:1px solid #E7E8E9; border-radius:7px; padding:10px; text-align:center;"><div style="font:700 22px/1 system-ui; color:#ABB0B6;">{{ kpiQueued }}</div><div style="font:500 9px/1.2 system-ui; color:#8A9199; margin-top:4px;">en file</div></div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-top:1px solid #ECEDEE;">
+                  <span style="font:500 11px/1 system-ui; color:#8A9199;">Temps écoulé</span>
+                  <span style="font:600 13px/1 ui-monospace; color:#5C6166;">{{ elapsed }}</span>
+                </div>
+                <div style="padding:8px 0 2px; border-top:1px solid #ECEDEE;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 7px;"><span style="font:500 11px/1 system-ui; color:#8A9199;">Synthèse des gates</span><span style="font:600 11px/1 ui-monospace; color:#5C6166;">11 PASS · 2 FAIL</span></div>
+                  <div style="display:flex; height:8px; border-radius:4px; overflow:hidden; border:1px solid #E7E8E9;"><div style="width:85%; background:#C5DE8F;"></div><div style="width:15%; background:#F0A8A8;"></div></div>
+                </div>
+              </div>
+            </div>
+            <!-- F5 -->
+            <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#F3F4F5; border-bottom:1px solid #E7E8E9; flex:none;">
+                <span style="font:600 10px/1 ui-monospace; letter-spacing:.06em; text-transform:uppercase; color:#5C6166;">Rapport final</span>
+                <span style="font:600 9px/1 ui-monospace; color:#ABB0B6; border:1px solid #E7E8E9; border-radius:3px; padding:2px 4px;">F5</span>
+                <div style="flex:1;"></div>
+                <span style="font:500 10px/1 ui-monospace; color:#C5C8CC;">{{ sel.reportFile }}</span>
+              </div>
+              <sc-if value="{{ sel.reportAvailable }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1; min-height:0; overflow:auto; padding:16px;">
+                  <div style="{{ sel.verdictWrapStyle }}">
+                    <span style="{{ sel.verdictIconStyle }}">{{ sel.verdictIcon }}</span>
+                    <div><div style="{{ sel.verdictKickerStyle }}">Verdict</div><div style="{{ sel.verdictTextStyle }}">{{ sel.verdictText }}</div></div>
+                  </div>
+                  <div style="font:700 16px/1.25 system-ui; color:#3B4044; margin:0 0 8px;">{{ sel.reportTitle }}</div>
+                  <div style="display:flex; flex-wrap:wrap; gap:5px; margin:0 0 14px;">
+                    <sc-for list="{{ sel.reportMeta }}" as="m" hint-placeholder-count="3"><span style="{{ m.style }}">{{ m.text }}</span></sc-for>
+                  </div>
+                  <div style="font:600 10px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#8A9199; margin:0 0 8px;">Preuves de gates</div>
+                  <div style="border:1px solid #E7E8E9; border-radius:7px; overflow:hidden; margin:0 0 14px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:7px 10px; background:#F3F4F5; border-bottom:1px solid #E7E8E9;"><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#ABB0B6;">Gate</span><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#ABB0B6;">Result</span><span style="font:600 8px/1 ui-monospace; text-transform:uppercase; color:#ABB0B6;">Evid.</span></div>
+                    <sc-for list="{{ sel.gates }}" as="g" hint-placeholder-count="3">
+                      <div style="{{ g.rowStyle }}"><span style="{{ g.nameStyle }}">{{ g.name }}</span><span style="font:400 10px/1 ui-monospace; color:#8A9199;">{{ g.evidence }}</span><span style="{{ g.badgeStyle }}">{{ g.verdict }}</span></div>
+                    </sc-for>
+                  </div>
+                  <div style="font:600 10px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:#8A9199; margin:0 0 8px;">Fichiers</div>
+                  <div style="display:flex; flex-direction:column; gap:6px;">
+                    <sc-for list="{{ sel.files }}" as="f" hint-placeholder-count="3"><div style="display:flex; align-items:center; gap:7px;"><span style="{{ f.signStyle }}">{{ f.sign }}</span><span style="font:500 11px/1 ui-monospace; color:#5C6166;">{{ f.name }}</span></div></sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ sel.reportPending }}" hint-placeholder-val="{{ true }}">
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 36px; background:repeating-linear-gradient(135deg,#FAFAFA,#FAFAFA 11px,#F3F4F5 11px,#F3F4F5 22px);">
+                  <div style="width:42px; height:42px; border-radius:10px; border:1.5px dashed #D9D8D7; display:flex; align-items:center; justify-content:center; margin:0 0 14px; color:#ABB0B6; font:300 20px/1 system-ui;">⧗</div>
+                  <div style="font:600 14px/1.3 system-ui; color:#787B80; margin:0 0 6px;">Rapport non disponible</div>
+                  <div style="font:400 12px/1.5 system-ui; color:#ABB0B6; max-width:240px;">{{ sel.reportPendingMsg }}</div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1488,&quot;height&quot;:920}}">
+class Component extends DCLogic {
+  state = { screen: 'f0', sel: 'w1', tick: 0, live: true, csec: 0, w2done: false };
+  W2_DONE_AT = 6;
+
+  enterCockpit(sel) { this.setState({ screen:'cockpit', sel: sel||'w1', csec:0, w2done:false }); }
+
+  componentDidMount() {
+    this._iv = setInterval(() => {
+      if (this.state.live && this.state.screen === 'cockpit') {
+        this.setState(s => {
+          const csec = s.csec + 1;
+          return { tick: s.tick + 1, csec, w2done: s.w2done || csec >= this.W2_DONE_AT };
+        });
+      }
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this._iv); }
+
+  // ---------- data ----------
+  agents() {
+    return {
+      principal: { name:'agent principal', role:'orchestrateur', status:'running', dur:'12:31', agentId:'agent_id 0b7e21a4…', toolCount:18,
+        reasoning:[
+          {type:'text', label:'text · plan', text:"Objectif : sécuriser l'auth (sessions + tokens). Je découpe en deux leads — bootstrap d'abord, puis auth-sessions qui parallélise 5 workers."},
+          {type:'thinking', label:'thinking', text:"Lot 1 lancé. W5 (contrat API) remonte un échec — je n'enchaîne pas le Lot 2 tant que le contrat n'est pas valide."},
+        ],
+        tools:[
+          {tool:'Agent', target:'dispatch → bootstrap-lead', status:'ok'},
+          {tool:'Agent', target:'dispatch → auth-sessions-lead', status:'running'},
+        ], report:null },
+
+      bootstrap: { name:'bootstrap-lead', role:'lead', status:'done', dur:'4m 04s', agentId:'agent_id 5c2f88de…', toolCount:9,
+        reasoning:[{type:'text', label:'text', text:"Initialisation du squelette : structure de projet, dépendances, configuration de base. Tout est en place pour les workers d'auth."}],
+        tools:[
+          {tool:'Write', target:'pyproject.toml', status:'ok'},
+          {tool:'Bash', target:'poetry install', status:'ok', statusText:'✓ OK', result:{label:'tool_result', text:'Installing dependencies…\nResolved 64 packages in 2.1s'}},
+          {tool:'Write', target:'app/config.py', status:'ok'},
+        ],
+        report:{ verdict:'pass', verdictText:'Squelette prêt — workers débloqués', title:'Bootstrap — structure & config',
+          meta:[['branch auth-sessions','n'],['role lead','n'],['commit 1a0b7e','ok']],
+          gates:[['Lint','clean','PASS'],['Install','64 pkgs','PASS']],
+          files:[['+','pyproject.toml'],['+','app/config.py']], file:'auth-sessions__bootstrap.md' } },
+
+      'auth-lead': { name:'auth-sessions-lead', role:'lead', status:'running', dur:'6m 12s', agentId:'agent_id 9d34 a1f…', toolCount:12,
+        reasoning:[
+          {type:'thinking', label:'thinking', text:"Je répartis le travail d'auth en 5 workers parallèles : backend tokens, frontend, docker, migration DB, contrat API. Sécurité et tests en Lot 2."},
+          {type:'text', label:'text', text:"Lot 1 dispatché (5 ∥). En attente des rapports avant de valider le Lot 2."},
+        ],
+        tools:[
+          {tool:'Agent', target:'dispatch → W1-backend', status:'running'},
+          {tool:'Agent', target:'dispatch → W2-frontend', status:'running'},
+          {tool:'Agent', target:'dispatch → W3-docker', status:'ok', statusText:'✓'},
+          {tool:'Agent', target:'dispatch → W4-db-migrate', status:'ok', statusText:'✓'},
+          {tool:'Agent', target:'dispatch → W5-api-contract', status:'fail', statusText:'✕'},
+        ], report:null },
+
+      w1: { name:'W1-backend', role:'worker', status:'running', dur:'1m 12s', agentId:'agent_id ad190d69…', toolCount:78,
+        reasoning:[
+          {type:'thinking', label:'thinking', text:"Rotation des refresh tokens : je dois vérifier le modèle Session existant et la table tokens avant de coder l'invalidation."},
+          {type:'text', label:'text · réponse', text:"J'ajoute une colonne rotated_at et j'invalide l'ancien token à chaque refresh. Migration Alembic puis tests."},
+          {type:'redacted'},
+          {type:'thinking', label:'thinking', text:"Reste à brancher le middleware de validation sur les routes protégées…", streaming:true},
+        ],
+        tools:[
+          {tool:'Bash', target:'alembic upgrade head', status:'ok', statusText:'✓ OK'},
+          {tool:'Read', target:'app/auth/sessions.py', status:'info', statusText:'312 lignes'},
+          {tool:'Edit', target:'app/auth/sessions.py · +24 −6', status:'ok', statusText:'✓', result:{label:'tool_result · tool_use_id 1f8c…', text:"@@ def refresh(token):\n+   token.rotated_at = now()\n+   old.invalidate()"}},
+          {tool:'Bash', target:'pytest tests/auth -q', status:'ok', statusText:'✓ 79 passed'},
+          {tool:'Bash', target:'mypy app/auth', status:'fail', statusText:'✕ 2 errors'},
+          {tool:'Write', target:'app/auth/tokens.py', status:'running', statusText:'en cours'},
+        ], report:null },
+
+      w2: this.state.w2done ? {
+        name:'W2-frontend', role:'worker', status:'done', dur:'1m 23s', agentId:'agent_id 7a02 e5b…', toolCount:34,
+        reasoning:[
+          {type:'text', label:'text', text:"Écran de connexion + gestion du refresh côté client. Je consomme l'endpoint /auth/session."},
+          {type:'thinking', label:'thinking', text:"Hook useSession câblé sur le refresh auto, écran de login en place. Tests verts — je clôture la tâche."},
+        ],
+        tools:[
+          {tool:'Read', target:'src/api/client.ts', status:'info', statusText:'88 lignes'},
+          {tool:'Write', target:'src/auth/useSession.ts', status:'ok', statusText:'✓'},
+          {tool:'Write', target:'src/pages/Login.tsx', status:'ok', statusText:'✓'},
+          {tool:'Bash', target:'vitest run', status:'ok', statusText:'✓ 22 passed', result:{label:'tool_result', text:'Test Files  4 passed (4)\n     Tests  22 passed (22)'}},
+        ],
+        report:{ verdict:'pass', verdictText:'Écran de connexion livré — tests verts', title:'Frontend — connexion & refresh session',
+          meta:[['branch auth-sessions','n'],['role frontend','n'],['commit 8e21a4','ok']],
+          gates:[['ESLint','0 warnings','PASS'],['Vitest','22 passed','PASS'],['Build','ok','PASS']],
+          files:[['+','src/auth/useSession.ts'],['+','src/pages/Login.tsx']], file:'auth-sessions__frontend.md' } } : {
+        name:'W2-frontend', role:'worker', status:'running', dur:'47s', agentId:'agent_id 7a02 e5b…', toolCount:31,
+        reasoning:[{type:'text', label:'text', text:"Écran de connexion + gestion du refresh côté client. Je consomme l'endpoint /auth/session."}],
+        tools:[
+          {tool:'Read', target:'src/api/client.ts', status:'info', statusText:'88 lignes'},
+          {tool:'Write', target:'src/auth/useSession.ts', status:'running', statusText:'en cours'},
+        ], report:null },
+
+      w3: { name:'W3-docker', role:'worker', status:'done', dur:'1m 58s', agentId:'agent_id 3e9b 0c1…', toolCount:31,
+        reasoning:[
+          {type:'thinking', label:'thinking', text:"Image multi-stage : build des deps puis runtime slim. Hadolint pour le lint, Trivy pour les CVE."},
+          {type:'text', label:'text', text:"Dockerfile + compose écrits, build OK, lint clean. Je passe la main au verifier."},
+        ],
+        tools:[
+          {tool:'Write', target:'Dockerfile', status:'ok', statusText:'✓'},
+          {tool:'Write', target:'docker-compose.yml', status:'ok', statusText:'✓'},
+          {tool:'Bash', target:'docker build -t app .', status:'ok', statusText:'✓'},
+          {tool:'Bash', target:'hadolint Dockerfile', status:'ok', statusText:'✓', result:{label:'tool_result', text:'No issues detected.'}},
+          {tool:'Agent', target:'dispatch → verifier', status:'info', statusText:'→'},
+        ],
+        report:{ verdict:'pass', verdictText:'Prêt à merger — build OK, lint clean', title:'Docker — conteneurisation service',
+          meta:[['branch auth-sessions','n'],['role docker','n'],['commit a3f9c2','ok']],
+          gates:[['Hadolint','0 issues','PASS'],['Build','image 184 MB','PASS'],['Trivy','0 HIGH/CRIT','PASS']],
+          files:[['+','Dockerfile'],['+','docker-compose.yml'],['+','.dockerignore']], file:'auth-sessions__docker.md' } },
+
+      w4: { name:'W4-db-migrate', role:'worker', status:'done', dur:'52s', agentId:'agent_id c81d 4fa…', toolCount:14,
+        reasoning:[{type:'text', label:'text', text:"Migration : ajout des colonnes rotated_at et revoked_at sur la table sessions. Revue puis applique."}],
+        tools:[
+          {tool:'Write', target:'migrations/0007_token_rotation.py', status:'ok', statusText:'✓'},
+          {tool:'Bash', target:'alembic upgrade head', status:'ok', statusText:'✓'},
+        ],
+        report:{ verdict:'pass', verdictText:'Migration appliquée — schéma à jour', title:'DB — migration rotation tokens',
+          meta:[['branch auth-sessions','n'],['role db','n'],['commit 6b2e10','ok']],
+          gates:[['Migration','applied','PASS'],['Rollback','tested','PASS']],
+          files:[['+','migrations/0007_token_rotation.py']], file:'auth-sessions__db.md' } },
+
+      w5: { name:'W5-api-contract', role:'worker', status:'failed', dur:'1m 02s', agentId:'agent_id 4f0a 9c2…', toolCount:21,
+        reasoning:[
+          {type:'thinking', label:'thinking', text:"Je génère le contrat OpenAPI à partir des routes FastAPI puis je valide la spec."},
+          {type:'text', label:'text', text:"Spec générée. La validation échoue : 3 schémas référencés mais non définis."},
+        ],
+        tools:[
+          {tool:'Read', target:'app/api/routes.py', status:'info', statusText:'204 lignes'},
+          {tool:'Write', target:'openapi/api.yaml', status:'ok', statusText:'✓'},
+          {tool:'Bash', target:'openapi-spec-validator api.yaml', status:'fail', statusText:'exit 1', result:{label:'tool_result · stderr', text:"3 validation errors:\n - #/components/schemas/Session undefined\n - #/components/schemas/Token undefined\n - missing 401 response on /auth/refresh"}},
+        ],
+        report:{ verdict:'fail', verdictText:'Bloquant — contrat OpenAPI invalide', title:'API — contrat OpenAPI',
+          meta:[['branch auth-sessions','n'],['role api','n'],['exit 1','fail']],
+          gates:[['Ruff','All passed','PASS'],['OpenAPI','3 errors','FAIL'],['Pytest','skipped','—']],
+          files:[['~','openapi/api.yaml']], file:'auth-sessions__api-contract.md' } },
+
+      w6: { name:'W6-security-review', role:'worker', status:'queued', dur:'en file', agentId:'—', toolCount:0, reasoning:[], tools:[], report:null },
+      w7: { name:'W7-tests', role:'worker', status:'queued', dur:'en file', agentId:'—', toolCount:0, reasoning:[], tools:[], report:null },
+      verifier: { name:'verifier', role:'verifier', status:'queued', dur:'en file', agentId:'—', toolCount:0, reasoning:[], tools:[], report:null },
+    };
+  }
+
+  treeOrder() {
+    return [
+      {id:'principal', depth:0},
+      {id:'bootstrap', depth:1},
+      {id:'auth-lead', depth:1},
+      {group:'Lot 1 · 5 workers ∥', depth:2},
+      {id:'w1', depth:3},{id:'w2', depth:3},{id:'w3', depth:3},{id:'w4', depth:3},{id:'w5', depth:3},
+      {group:'Lot 2 · en file', depth:2},
+      {id:'w6', depth:3},{id:'w7', depth:3},
+      {id:'verifier', depth:1},
+    ];
+  }
+
+  preset(status) {
+    const P = {
+      running:{ showDot:true, dot:'#399EE6', label:'#3B4044', border:'#E7E8E9', bg:'#FCFCFC', badgeFg:'#3585C7', badgeBg:'#E6F0FA', badgeBd:'#A8D2F0', badgeText:'En cours' },
+      done:{ showDot:false, glyph:'✓', glyphColor:'#6F9B1F', label:'#5C6166', border:'#E7E8E9', bg:'#FCFCFC', badgeFg:'#5E8A0E', badgeBg:'#F3F8E9', badgeBd:'#DCEBB9', badgeText:'Terminé' },
+      failed:{ showDot:false, glyph:'✕', glyphColor:'#E15252', label:'#C44848', border:'#F0A8A8', bg:'#FCEDED', badgeFg:'#C44848', badgeBg:'#FCEDED', badgeBd:'#F5C9C9', badgeText:'Échec' },
+      queued:{ showDot:false, glyph:'◦', glyphColor:'#C5C8CC', label:'#ABB0B6', border:'#D9D8D7', bg:'#F3F4F5', badgeFg:'#ABB0B6', badgeBg:'#EFF0F1', badgeBd:'#E7E8E9', badgeText:'En file' },
+    };
+    return P[status];
+  }
+
+  // ---------- presentation ----------
+  decoNode(t, agents) {
+    if (t.group) {
+      return { isGroup:true, isAgent:false, name:t.group, wrapStyle:`margin-left:${t.depth*13}px; border-left:${t.depth>0?'1.5px solid #E7E8E9':'none'}; padding-left:${t.depth>0?'9px':'0'};` };
+    }
+    const a = agents[t.id]; const p = this.preset(a.status);
+    const isSel = this.state.sel === t.id;
+    const dashed = a.status === 'queued';
+    const rowStyle = `display:flex; align-items:center; gap:7px; padding:6px 8px; margin:3px 0; border-radius:6px; cursor:pointer;`
+      + `border:1px ${dashed?'dashed':'solid'} ${isSel?'#399EE6':p.border}; background:${isSel?'#F0F6FC':p.bg};`
+      + (isSel?'box-shadow:0 0 0 1px #399EE6;':'')
+      + ((t.id==='w2' && this.w2Just())?'box-shadow:0 0 0 2px #C5DE8F; background:#F3F8E9;':'');
+    return {
+      isGroup:false, isAgent:true,
+      wrapStyle:`margin-left:${t.depth*13}px; border-left:${t.depth>0?'1.5px solid #E7E8E9':'none'}; padding-left:${t.depth>0?'9px':'0'};`,
+      onSelect:() => this.setState({ sel:t.id }),
+      rowStyle, name:a.name,
+      showDot:p.showDot, dotStyle:`width:8px;height:8px;border-radius:50%;background:${p.dot};flex:none;animation:ccpulse 1.4s ease-in-out infinite;`,
+      showGlyph:!p.showDot, glyph:p.glyph, glyphStyle:`color:${p.glyphColor};font:700 10px/1 ui-monospace;flex:none;width:9px;text-align:center;`,
+      nameStyle:`font:${isSel?'700':'600'} 11px/1 ui-monospace; color:${isSel?'#3585C7':p.label};`,
+      hasRole: a.role==='lead'||a.role==='orchestrateur', role:a.role,
+      durStyle:`font:500 9px/1 ui-monospace; color:${isSel?'#399EE6':'#ABB0B6'};`, dur:a.dur,
+    };
+  }
+
+  decoSel(agents) {
+    const a = agents[this.state.sel]; const p = this.preset(a.status);
+    const r = (a.reasoning||[]).map((b,i) => {
+      if (b.type==='redacted') return { isRedacted:true, isText:false };
+      const bar = b.type==='thinking' ? '#D5C5EC' : '#C5C8CC';
+      const lblColor = b.type==='thinking' ? '#A37ACC' : '#787B80';
+      return { isRedacted:false, isText:true, barStyle:`border-left:2px solid ${bar}; padding:0 0 0 12px;`,
+        labelStyle:`font:600 9px/1 ui-monospace; text-transform:uppercase; letter-spacing:.05em; color:${lblColor};`,
+        label:b.label, streaming:!!b.streaming,
+        textStyle:`font:400 12px/1.55 ui-monospace; color:${b.type==='thinking'?'#787B80':'#5C6166'}; ${b.type==='thinking'?'font-style:italic;':''}`, text:b.text };
+    });
+    const tools = (a.tools||[]).map(tl => {
+      const st = { ok:'#5E8A0E', fail:'#C44848', running:'#399EE6', info:'#ABB0B6' }[tl.status];
+      const tagPalette = { Bash:['#5C6166','#F0F1F2','#E7E8E9'], Read:['#5C6166','#F0F1F2','#E7E8E9'], Write:['#5C6166','#F0F1F2','#E7E8E9'], Edit:['#8A5FB8','#F3EEFA','#DDD0EE'], Agent:['#8A5FB8','#F3EEFA','#DDD0EE'] }[tl.tool] || ['#5C6166','#F0F1F2','#E7E8E9'];
+      const failRow = tl.status==='fail'; const runRow = tl.status==='running';
+      return {
+        rowStyle:`border:1px solid ${failRow?'#F0A8A8':runRow?'#A8D2F0':'#E7E8E9'}; border-radius:6px; background:${failRow?'#FDF2F2':runRow?'#F0F6FC':'#FCFCFC'}; overflow:hidden;`,
+        tagStyle:`font:600 10px/1 ui-monospace; color:${tagPalette[0]}; background:${tagPalette[1]}; border:1px solid ${tagPalette[2]}; border-radius:4px; padding:3px 6px; flex:none; width:46px; text-align:center;`,
+        tool:tl.tool, target:tl.target,
+        statusStyle:`display:inline-flex; align-items:center; gap:5px; font:600 10px/1 ui-monospace; color:${st};`,
+        statusText:tl.statusText || '',
+        hasResult:!!tl.result,
+        resultWrapStyle:`border-top:1px dashed ${failRow?'#F5C9C9':'#E7E8E9'}; background:${failRow?'#FCFCFC':'#F3F4F5'}; padding:9px 12px 10px;`,
+        resultLabelStyle:`font:600 8px/1 ui-monospace; text-transform:uppercase; color:${failRow?'#E15252':'#ABB0B6'}; margin:0 0 6px;`,
+        resultLabel: tl.result ? tl.result.label : '', resultText: tl.result ? tl.result.text : '',
+      };
+    });
+    const rep = a.report;
+    const metaStyle = (k) => k==='ok' ? 'font:500 9px/1 ui-monospace; color:#5E8A0E; background:#F3F8E9; border:1px solid #DCEBB9; border-radius:4px; padding:3px 6px;'
+      : k==='fail' ? 'font:500 9px/1 ui-monospace; color:#C44848; background:#FCEDED; border:1px solid #F5C9C9; border-radius:4px; padding:3px 6px;'
+      : 'font:500 9px/1 ui-monospace; color:#787B80; background:#EFF0F1; border:1px solid #E7E8E9; border-radius:4px; padding:3px 6px;';
+    const gateBadge = (v) => v==='PASS' ? 'font:700 9px/1 ui-monospace; color:#5E8A0E; background:#F3F8E9; border:1px solid #DCEBB9; border-radius:4px; padding:3px 6px;'
+      : v==='FAIL' ? 'font:700 9px/1 ui-monospace; color:#FCFCFC; background:#E15252; border-radius:4px; padding:3px 6px;'
+      : 'font:700 9px/1 ui-monospace; color:#8A9199; background:#EFF0F1; border:1px solid #E7E8E9; border-radius:4px; padding:3px 6px;';
+
+    return {
+      name:a.name, agentId:a.agentId,
+      showDot:p.showDot, dotStyle:`width:8px;height:8px;border-radius:50%;background:${p.dot};animation:ccpulse 1.4s ease-in-out infinite;`,
+      showGlyph:!p.showDot, glyph:p.glyph, glyphStyle:`color:${p.glyphColor};font:700 12px/1 ui-monospace;`,
+      badgeStyle:`display:inline-flex; align-items:center; gap:5px; font:500 11px/1 system-ui; color:${p.badgeFg}; background:${p.badgeBg}; border:1px solid ${p.badgeBd}; border-radius:999px; padding:3px 8px;`,
+      badgeText:p.badgeText,
+      reasoningMeta: a.reasoning&&a.reasoning.length ? `${a.reasoning.length} blocs · ajout par bloc` : '—',
+      reasoningEmpty: !(a.reasoning&&a.reasoning.length), reasoning:r, emptyMsg:'Agent en file — aucun raisonnement émis',
+      hasTools: (a.tools&&a.tools.length>0), toolCount:a.toolCount, toolsEmpty:!(a.tools&&a.tools.length), tools,
+      reportAvailable:!!rep, reportPending: !rep, reportFile: rep ? rep.file : (a.status==='queued'?'—':a.name.toLowerCase()+'.md'),
+      reportPendingMsg: a.status==='queued' ? `L'agent ${a.name} est en file. Le rapport sera écrit en fin de tâche.` : `L'agent ${a.name} est encore en cours. Le rapport reports/*.md est écrit en fin de tâche.`,
+      verdictWrapStyle: rep ? `display:flex; align-items:center; gap:8px; padding:9px 11px; border:1px solid ${rep.verdict==='pass'?'#DCEBB9':'#F5C9C9'}; border-radius:7px; background:${rep.verdict==='pass'?'#F3F8E9':'#FCEDED'}; margin:0 0 14px;` : '',
+      verdictIconStyle: rep ? `width:22px;height:22px;border-radius:50%;background:${rep.verdict==='pass'?'#6F9B1F':'#E15252'};color:#FCFCFC;display:flex;align-items:center;justify-content:center;font:700 11px/1 ui-monospace;flex:none;` : '',
+      verdictIcon: rep ? (rep.verdict==='pass'?'✓':'✕') : '',
+      verdictKickerStyle: rep ? `font:700 11px/1.2 system-ui; color:${rep.verdict==='pass'?'#5E8A0E':'#C44848'}; text-transform:uppercase; letter-spacing:.04em;` : '',
+      verdictTextStyle: rep ? `font:500 12px/1.3 system-ui; color:${rep.verdict==='pass'?'#4F7A0A':'#B33E3E'}; margin-top:2px;` : '',
+      verdictText: rep ? rep.verdictText : '',
+      reportTitle: rep ? rep.title : '',
+      reportMeta: rep ? rep.meta.map(([text,k]) => ({ text, style:metaStyle(k) })) : [],
+      gates: rep ? rep.gates.map(([name,evidence,verdict]) => ({ name, evidence, verdict,
+        rowStyle:`display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding:8px 10px; border-bottom:1px solid #ECEDEE; align-items:center; ${verdict==='FAIL'?'background:#FDF2F2;':''}`,
+        nameStyle:`font:${verdict==='FAIL'?'700':'600'} 11px/1 ui-monospace; color:${verdict==='FAIL'?'#C44848':'#5C6166'};`,
+        badgeStyle:gateBadge(verdict) })) : [],
+      files: rep ? rep.files.map(([sign,name]) => ({ sign, name,
+        signStyle:`font:600 9px/1 ui-monospace; color:${sign==='+'?'#6F9B1F':sign==='~'?'#E69138':'#E15252'};` })) : [],
+    };
+  }
+
+  decoTimeline(agents) {
+    const rows = [
+      ['bootstrap','bootstrap','#787B80','left:0;width:32%;','#DCEBB9','#C5DE8F'],
+      ['auth-lead','auth-lead','#3B4044','left:34%;right:0;','#A8D2F0','#7FBDE8'],
+      ['w3','W3-dock','#787B80','left:55%;width:22%;','#DCEBB9','#C5DE8F'],
+      ['w4','W4-db','#787B80','left:56%;width:11%;','#DCEBB9','#C5DE8F'],
+      ['w5','W5-api','#C44848','left:55%;width:14%;','#F5C9C9','#EF8E8E'],
+      ['w1','W1-back','#3585C7','left:57%;right:0;','#A8D2F0','#399EE6'],
+      this.state.w2done
+        ? ['w2','W2-front','#5E8A0E','left:60%;width:24%;','#DCEBB9','#C5DE8F']
+        : ['w2','W2-front','#787B80','left:60%;right:0;','#A8D2F0','#7FBDE8'],
+    ];
+    return rows.map(([id,label,color,pos,fill,bd]) => {
+      const isSel = this.state.sel===id;
+      return { onSelect:()=>this.setState({sel:id}),
+        labelStyle:`width:64px; flex:none; font:${isSel?'700':'500'} 9px/1 ui-monospace; color:${isSel?'#3585C7':color}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;`,
+        label, barStyle:`position:absolute; ${pos} top:2px; height:9px; border-radius:3px; background:${fill}; border:${isSel?'2px':'1px'} solid ${isSel?'#399EE6':bd}; ${isSel?'box-shadow:0 0 0 2px #E6F0FA;':''}` };
+    });
+  }
+
+  sessions() {
+    const mk = (project, path, sid, title, st, activity) => {
+      const map = { active:['#3585C7','#E6F0FA','#A8D2F0','#399EE6','Active',true], recent:['#A66A2E','#FBF3E5','#ECCB8F',null,'Récente',false], done:['#787B80','#EFF0F1','#E7E8E9',null,'Terminée',false] };
+      const [fg,bg,bd,dot,text,pulse] = map[st];
+      const isActive = st==='active';
+      return { project, path, sid, title, activity,
+        rowStyle:`display:grid; grid-template-columns:1.7fr 0.9fr 1.5fr 0.95fr 1fr auto; gap:14px; align-items:center; padding:13px 22px; border-bottom:1px solid #ECEDEE; cursor:pointer; ${isActive?'background:#F0F6FC; box-shadow:inset 3px 0 0 #399EE6;':''}`,
+        onOpen:()=>this.enterCockpit('w1'),
+        stateStyle:`display:inline-flex; align-items:center; gap:6px; width:max-content; font:500 11px/1 system-ui; color:${fg}; background:${bg}; border:1px solid ${bd}; border-radius:999px; padding:4px 9px;`,
+        stateDotStyle: dot ? `width:6px;height:6px;border-radius:50%;background:${dot};${pulse?'animation:ccpulse 1.4s ease-in-out infinite;':''}` : `font:700 9px/1 ui-monospace; color:${fg};`,
+        stateGlyph: dot ? '' : (st==='done'?'✓':'◴'),
+        stateText:text,
+        btnStyle:`background:${isActive?'#3B4044':'#FCFCFC'}; color:${isActive?'#FCFCFC':'#5C6166'}; border:${isActive?'0':'1px solid #D9D8D7'}; border-radius:5px; padding:7px 12px; font:600 12px/1 system-ui; cursor:pointer;` };
+    };
+    return [
+      mk('treuil-service-projet','/home/yoann/treuil-service-projet','9f3a4c1e','Auth : sessions + tokens','active','il y a 3 s'),
+      mk('treuil-service-projet','/home/yoann/treuil-service-projet','7b1c08d2','Refactor paiements','recent','il y a 14 min'),
+      mk('omc-dashboard','/home/yoann/omc-dashboard','2e90f7a5','Setup CI docker','recent','il y a 1 h'),
+      mk('treuil-billing','/home/yoann/treuil-billing','c4d1b6e9','Migration DB v3','done','hier 18:42'),
+      mk('omc-dashboard','/home/yoann/omc-dashboard','a0f53b8c','— sans titre —','done','16 juin'),
+    ];
+  }
+
+  w2Just() { return this.state.w2done && this.state.csec >= this.W2_DONE_AT && this.state.csec < this.W2_DONE_AT + 5; }
+
+  fmtElapsed() {
+    const base = 12*60 + 31 + (this.state.live ? this.state.tick : this.state.tick);
+    const m = Math.floor(base/60), s = base%60;
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+
+  renderVals() {
+    const agents = this.agents();
+    const nodes = this.treeOrder().map(t => this.decoNode(t, agents));
+    const live = this.state.live;
+    return {
+      isF0: this.state.screen==='f0',
+      isCockpit: this.state.screen==='cockpit',
+      sessions: this.sessions(),
+      enterActive: () => this.enterCockpit('w1'),
+      back: () => this.setState({screen:'f0'}),
+      selectFail: () => this.setState({sel:'w5'}),
+      nodes,
+      timeline: this.decoTimeline(agents),
+      sel: this.decoSel(agents),
+      selHeaderStyle:`display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid #E7E8E9; background:#F0F6FC;`,
+      selNameStyle:`display:inline-flex; align-items:center; gap:7px; font:700 13px/1 ui-monospace; color:#3585C7;`,
+      elapsed: this.fmtElapsed(),
+      kpiActive: this.state.w2done?2:3, kpiDone: this.state.w2done?4:3, kpiFail:1, kpiQueued:3,
+      toast: this.w2Just(),
+      live, liveLabel: live?'Live':'En pause',
+      liveBtnStyle:`display:inline-flex; align-items:center; gap:6px; font:600 12px/1 system-ui; cursor:pointer; border-radius:999px; padding:4px 11px; ${live?'color:#5E8A0E; background:#F3F8E9; border:1px solid #DCEBB9;':'color:#A66A2E; background:#FBF3E5; border:1px solid #ECCB8F;'}`,
+      liveDotStyle:`width:7px;height:7px;border-radius:50%;background:${live?'#86B300':'#E69138'};${live?'animation:ccpulse 1.4s ease-in-out infinite;':''}`,
+      toggleLive: () => this.setState(s=>({live:!s.live})),
+    };
+  }
+}
+</script>
+</body>
+</html>
