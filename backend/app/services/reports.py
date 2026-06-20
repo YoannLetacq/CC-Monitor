@@ -58,29 +58,50 @@ def extract_title(md_text: str, file_name: str) -> str | None:
     return file_name
 
 
+def _first_keyword_pos(upper: str, keywords: tuple[str, ...]) -> int:
+    """Return the position of the earliest whole-word keyword match, or ``-1``."""
+    positions = []
+    for keyword in keywords:
+        match = re.search(r"\b" + keyword + r"\b", upper)
+        if match is not None:
+            positions.append(match.start())
+    return min(positions) if positions else -1
+
+
 def _classify_verdict(text: str) -> Verdict:
-    """Classify a one-line verdict by keyword (pass wins over fail ties)."""
+    """Classify a one-line verdict by the earliest whole-word keyword.
+
+    The verdict keyword that appears first in the text wins.  This prevents
+    trailing prose like ``"did not pass"`` from overriding a leading ``FAIL``.
+    """
     upper: str = text.upper()
-    if any(keyword in upper for keyword in _PASS_KEYWORDS):
+    pass_pos = _first_keyword_pos(upper, _PASS_KEYWORDS)
+    fail_pos = _first_keyword_pos(upper, _FAIL_KEYWORDS)
+    if pass_pos == -1 and fail_pos == -1:
+        return "unknown"
+    if pass_pos != -1 and (fail_pos == -1 or pass_pos < fail_pos):
         return "pass"
-    if any(keyword in upper for keyword in _FAIL_KEYWORDS):
+    if fail_pos != -1 and (pass_pos == -1 or fail_pos < pass_pos):
         return "fail"
-    return "unknown"
+    return "pass"
 
 
 def _verdict_from_inline(md_text: str) -> str | None:
-    """Return the verdict text from a bold inline form, if present.
+    """Return the verdict text from a line-anchored bold inline form, if present.
+
+    Only matches when the bold marker is the first non-whitespace token on its
+    line (``^\\s*\\*\\*``), preventing mid-prose occurrences from being captured.
 
     Handles both ``**Verdict: X ...**`` (value inside the bold span) and
     ``**Verdict:** X ...`` (value after the bold label).
     """
     inside = re.search(
-        r"\*\*\s*verdict\s*:\s*(.+?)\s*\*\*(.*)$", md_text, re.IGNORECASE | re.MULTILINE
+        r"^\s*\*\*\s*verdict\s*:\s*(.+?)\s*\*\*(.*)$", md_text, re.IGNORECASE | re.MULTILINE
     )
     if inside is not None:
         return (inside.group(1).strip() + " " + inside.group(2).strip()).strip()
     after = re.search(
-        r"\*\*\s*verdict\s*:?\s*\*\*\s*[:\-—]?\s*(.+)$",
+        r"^\s*\*\*\s*verdict\s*:?\s*\*\*\s*[:\-—]?\s*(.+)$",
         md_text,
         re.IGNORECASE | re.MULTILINE,
     )
@@ -114,10 +135,17 @@ def _first_nonblank(lines: list[str]) -> str | None:
 def extract_verdict(md_text: str) -> tuple[Verdict, str | None]:
     """Return ``(verdict, verdict_text)`` from any of the four forms.
 
-    The raw one-line verdict text is preserved; the class is derived from
-    keywords. No marker at all yields ``("unknown", None)``.
+    Priority order:
+    1. ``## VERDICT: X`` or ``## Verdict`` heading (most authoritative).
+    2. Line-anchored ``**Verdict: X**`` / ``**Verdict:** X`` as fallback.
+
+    The heading form is always preferred; the inline form is only consulted
+    when no heading verdict exists.  The raw one-line verdict text is
+    preserved; the class is derived from keywords.  No marker at all yields
+    ``("unknown", None)``.
     """
-    text = _verdict_from_inline(md_text) or _verdict_from_heading(md_text.splitlines())
+    lines = md_text.splitlines()
+    text = _verdict_from_heading(lines) or _verdict_from_inline(md_text)
     if text is None:
         return "unknown", None
     return _classify_verdict(text), text
@@ -340,3 +368,18 @@ def _read_and_parse(path: Path, name: str, role: str) -> ReportView:
         logger.debug("cannot read report %s: %s", path, exc)
         return _unavailable(role)
     return parse_report(md_text, name)
+
+
+def load_all_reports(reports_dir: Path) -> list[ReportView]:
+    """Load all available reports from ``reports_dir`` in sorted order.
+
+    Every ``*__*.md`` file is parsed independently — one :class:`ReportView`
+    per file — so reports that share the same role are all returned and none
+    is silently dropped.  :func:`load_report` is intentionally **not** used
+    here because it deduplicates by role (correct for the single-role endpoint
+    ``/reports/{role}``; wrong for the full listing ``/reports``).
+    """
+    names = list_reports(reports_dir)
+    return [
+        _read_and_parse(reports_dir / name, name, role_of(name)) for name in names
+    ]

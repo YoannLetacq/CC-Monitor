@@ -14,6 +14,7 @@ from app.services.reports import (
     extract_title,
     extract_verdict,
     list_reports,
+    load_all_reports,
     load_report,
     parse_report,
     role_of,
@@ -251,3 +252,86 @@ def test_load_report_rejects_traversal_role(tmp_path: Path) -> None:
     """A role outside the whitelist resolves to an unavailable view."""
     view = load_report(tmp_path, "../secret")
     assert view.available is False
+
+
+# ---------------------------------------------------------------------------
+# MEDIUM-1: inline verdict in prose must not override a real ## Verdict heading
+# ---------------------------------------------------------------------------
+
+_PROSE_INLINE_THEN_HEADING = """# Worker Report
+
+Some context: The **verdict: pending** review continues.
+More prose here that mentions verdict in passing.
+
+## Verdict
+
+FAIL. Gates did not pass.
+"""
+
+_INLINE_ANCHORED_SOLO = """# Worker Report
+
+**Verdict: PASS** — all checks green.
+"""
+
+_INLINE_AFTER_LABEL_ANCHORED = """# Worker Report
+
+**Verdict:** APPROVE — everything looks good.
+"""
+
+
+def test_verdict_prose_inline_ignored_when_heading_present() -> None:
+    """Inline bold verdict buried in prose must not shadow a real ## Verdict heading."""
+    verdict, text = extract_verdict(_PROSE_INLINE_THEN_HEADING)
+    assert verdict == "fail", (
+        "heading ## Verdict must take priority over mid-prose **verdict: pending**"
+    )
+    assert text is not None and "FAIL" in text.upper()
+
+
+def test_verdict_inline_anchored_at_line_start_is_captured() -> None:
+    """Inline **Verdict: PASS** anchored at the start of a line is captured as fallback."""
+    verdict, text = extract_verdict(_INLINE_ANCHORED_SOLO)
+    assert verdict == "pass"
+    assert text is not None and "PASS" in text.upper()
+
+
+def test_verdict_inline_after_label_anchored_is_captured() -> None:
+    """Inline **Verdict:** APPROVE anchored at line start is captured as fallback."""
+    verdict, text = extract_verdict(_INLINE_AFTER_LABEL_ANCHORED)
+    assert verdict == "pass"
+    assert text is not None
+
+
+# ---------------------------------------------------------------------------
+# MEDIUM-2: load_all_reports must not lose reports with duplicate roles
+# ---------------------------------------------------------------------------
+
+
+def test_load_all_reports_no_loss_on_duplicate_role(tmp_path: Path) -> None:
+    """Two files sharing the same role must both appear in load_all_reports."""
+    (tmp_path / "branchA__verify.md").write_text(
+        "# Report A\n\n## Verdict\n\nPASS.", encoding="utf-8"
+    )
+    (tmp_path / "branchB__verify.md").write_text(
+        "# Report B\n\n## Verdict\n\nFAIL.", encoding="utf-8"
+    )
+    views = load_all_reports(tmp_path)
+    assert len(views) == 2, "both verify reports must be returned, none silently dropped"
+    titles = {v.title for v in views}
+    assert "Report A" in titles
+    assert "Report B" in titles
+
+
+def test_load_all_reports_each_file_parsed_independently(tmp_path: Path) -> None:
+    """load_all_reports parses each file on its own merits (no dedup by role)."""
+    (tmp_path / "x__executor.md").write_text(
+        "# Exec X\n\n## Verdict\n\nPASS.", encoding="utf-8"
+    )
+    (tmp_path / "y__executor.md").write_text(
+        "# Exec Y\n\n## Verdict\n\nFAIL.", encoding="utf-8"
+    )
+    views = load_all_reports(tmp_path)
+    verdicts = {v.verdict for v in views}
+    assert "pass" in verdicts and "fail" in verdicts, (
+        "each file must be parsed independently; both verdicts must be present"
+    )
