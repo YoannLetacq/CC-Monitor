@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import sessions_router
+from app.api import orchestration_router, sessions_router
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     application.include_router(sessions_router)
+    application.include_router(orchestration_router)
 
     _mount_static(application)
 

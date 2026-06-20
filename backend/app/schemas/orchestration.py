@@ -1,8 +1,9 @@
-"""Pydantic response schemas for orchestration state and timeline (F1/F2).
+"""Pydantic response schemas for orchestration state, timeline and overview (F1/F2/F6).
 
 This module defines the read-only wire schemas for agent topology
-(``AgentNode`` / ``AgentTree``, F1) and the agent chronology
-(``TimelineEvent``, F2). Report-view schemas (F5) live in a separate module.
+(``AgentNode`` / ``AgentTree``, F1), the agent chronology
+(``TimelineEvent``, F2), and the session overview (``GateSummary`` /
+``SessionOverview``, F6). Report-view schemas (F5) live in a separate module.
 
 All schemas use camelCase JSON aliases via ``alias_generator`` so the wire
 format matches the frontend convention (``agentId``, ``startedAt``, …) while
@@ -91,3 +92,43 @@ class TimelineEvent(BaseModel):
     success: bool | None
     at: datetime | None
     duration_ms: int | None
+
+
+class GateSummary(BaseModel):
+    """Aggregated gate outcome counts across all session reports (F6).
+
+    Counts reflect only reports where ``available`` is ``True``.
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    pass_count: int
+    fail_count: int
+
+
+class SessionOverview(BaseModel):
+    """High-level session status summary (F6).
+
+    ``active``/``done``/``failed``/``queued`` are **always recounted** from
+    the ``agents[]`` list in ``subagent-tracking.json`` — the ``total_*``
+    aggregates in that file are incoherent on real data and are ignored.
+    ``elapsed_ms`` is ``now − min(started_at)``; ``None`` when no agent
+    has a ``started_at``. ``gate_summary`` aggregates PASS/FAIL counts
+    across all available reports.
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    session_id: str
+    active: int
+    done: int
+    failed: int
+    queued: int
+    elapsed_ms: int | None
+    gate_summary: GateSummary
