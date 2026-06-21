@@ -15,7 +15,6 @@ GET /api/sessions/{session_id}
 """
 
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -23,7 +22,12 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import Settings, get_settings
 from app.schemas.sessions import SessionDetail, SessionSummary
-from app.services.discovery import SessionRecord, classify_state, discover_sessions
+from app.services.discovery import (
+    SessionRecord,
+    _classify_for_record,
+    discover_sessions,
+    find_session,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,20 +40,13 @@ _SORT_RECENT: str = "recent"
 
 def _to_summary(record: SessionRecord, settings: Settings) -> SessionSummary:
     """Map a :class:`SessionRecord` to a :class:`SessionSummary` response model."""
-    now = datetime.now(timezone.utc)
-    state = classify_state(
-        record.last_activity,
-        now,
-        settings.session_active_threshold_s,
-        settings.session_recent_threshold_s,
-    )
     return SessionSummary(
         session_id=record.session_id,
         project_path=record.project_path,
         project_slug=record.project_slug,
         resolved=record.resolved,
         title=record.title,
-        state=state,
+        state=_classify_for_record(record, settings),
         last_activity=record.last_activity,
         started_at=record.started_at,
     )
@@ -57,13 +54,6 @@ def _to_summary(record: SessionRecord, settings: Settings) -> SessionSummary:
 
 def _to_detail(record: SessionRecord, settings: Settings) -> SessionDetail:
     """Map a :class:`SessionRecord` to a :class:`SessionDetail` response model."""
-    now = datetime.now(timezone.utc)
-    state = classify_state(
-        record.last_activity,
-        now,
-        settings.session_active_threshold_s,
-        settings.session_recent_threshold_s,
-    )
     transcript_path = (
         str(record.transcript_path) if record.transcript_path is not None else None
     )
@@ -73,7 +63,7 @@ def _to_detail(record: SessionRecord, settings: Settings) -> SessionDetail:
         project_slug=record.project_slug,
         resolved=record.resolved,
         title=record.title,
-        state=state,
+        state=_classify_for_record(record, settings),
         last_activity=record.last_activity,
         started_at=record.started_at,
         transcript_path=transcript_path,
@@ -124,11 +114,15 @@ def get_session(
     in the enumerated session list — it is **never** used to construct a file
     path directly. An unrecognised id (including path-traversal payloads)
     yields HTTP 404.
+
+    Uses ``find_session`` which short-circuits enumeration on first match
+    (PERF2), preserving the path-traversal protection: ``session_id`` is only
+    compared against ids produced by the enumeration, never used to build a
+    file path.
     """
     projects_root = _get_projects_root(settings)
-    records = discover_sessions(projects_root)
-    for record in records:
-        if record.session_id == session_id:
-            return _to_detail(record, settings)
+    record = find_session(projects_root, session_id)
+    if record is not None:
+        return _to_detail(record, settings)
     logger.debug("get_session: session_id %r not found", session_id)
     raise HTTPException(status_code=404, detail="Session not found")
