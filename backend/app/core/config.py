@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     claude_projects_root: str = "~/.claude/projects"
     session_active_threshold_s: int = 90
     session_recent_threshold_s: int = 1800
+    transcript_tail_max_bytes: int = 1_000_000
+    poll_interval_s: float = 1.0
+    heartbeat_interval_s: float = 15.0
+    tool_content_cap: int = 2000
+    max_pending_tools: int = 512
 
     @classmethod
     def settings_customise_sources(
