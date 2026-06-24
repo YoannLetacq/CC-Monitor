@@ -374,6 +374,20 @@ async def _wait_for_wake(queue: "asyncio.Queue[None]", timeout: float) -> None:
         queue.get_nowait()
 
 
+def _next_timeout(elapsed: float, settings: Settings) -> float:
+    """Compute the next wake-wait timeout bounded by the heartbeat deadline.
+
+    Returns ``min(poll_interval_s, max(0, heartbeat_interval_s - elapsed))``
+    so the generator wakes in time to emit the heartbeat without waiting an
+    extra full poll cycle (M2).  ``elapsed`` is the seconds since the last
+    emitted event, sampled on the event loop before this call.
+    """
+    return min(
+        settings.poll_interval_s,
+        max(0.0, settings.heartbeat_interval_s - elapsed),
+    )
+
+
 async def event_generator(
     project_path: str,
     sid: str,
@@ -387,6 +401,16 @@ async def event_generator(
     recomputing state on change, announcing new reports, and emitting a
     ``heartbeat`` after ``heartbeat_interval_s`` of silence.  A ``try/finally``
     guarantees the watchdog observer is stopped on disconnect (R-THREAD).
+
+    Blocking I/O (file reads, JSON parsing) is offloaded to a thread via
+    ``asyncio.to_thread`` so the event loop is never stalled by synchronous
+    filesystem operations.  ``loop.time()`` is always sampled on the loop
+    thread and passed into the thread as a plain ``float``; the thread never
+    calls ``loop.time()`` directly (M1).
+
+    The wake-wait timeout is bounded by the remaining time to the next
+    heartbeat so the keep-alive never drifts past ``heartbeat_interval_s``
+    regardless of how large ``poll_interval_s`` is (M2).
     """
     watched = _resolve_paths(transcript_path, project_path, sid)
     state = _StreamState(state_sig=_state_signature(watched.state_dir, watched.reports_dir))
@@ -398,14 +422,17 @@ async def event_generator(
     observer = _start_observer(watched, loop, queue)
     ctx = _Context(state=state, watched=watched, settings=settings, sid=sid)
     try:
-        for message in _snapshot_messages(watched, sid):
+        for message in await asyncio.to_thread(_snapshot_messages, watched, sid):
             yield message
-        for message in _drain_flow(state.flows[None], sid):
+        for message in await asyncio.to_thread(_drain_flow, state.flows[None], sid):
             yield message
         last_emit = loop.time()
         while True:
-            await _wait_for_wake(queue, settings.poll_interval_s)
-            batch, last_emit = _loop_step(ctx, last_emit, loop)
+            timeout = _next_timeout(loop.time() - last_emit, settings)
+            await _wait_for_wake(queue, timeout)
+            batch, last_emit = await asyncio.to_thread(
+                _loop_step, ctx, last_emit, loop.time()
+            )
             for message in batch:
                 yield message
     finally:
@@ -416,9 +443,12 @@ async def event_generator(
 def _loop_step(
     ctx: _Context,
     last_emit: float,
-    loop: asyncio.AbstractEventLoop,
+    now: float,
 ) -> tuple[list[str], float]:
     """Compute the next batch of messages and the updated last-emit clock.
+
+    ``now`` is sampled on the event loop before this function is called in a
+    thread so that ``loop.time()`` is never invoked from a worker thread (M1).
 
     Drains all sources; if anything was produced it is returned and the clock
     advances.  Otherwise a ``heartbeat`` is emitted once the silence exceeds
@@ -426,8 +456,7 @@ def _loop_step(
     """
     messages = _drain_all(ctx.state, ctx.watched, ctx.settings, ctx.sid)
     if messages:
-        return messages, loop.time()
-    now = loop.time()
+        return messages, now
     if now - last_emit >= ctx.settings.heartbeat_interval_s:
         heartbeat = HeartbeatEvent(session_id=ctx.sid, ts=datetime.now(timezone.utc))
         return [encode_sse("heartbeat", heartbeat)], now

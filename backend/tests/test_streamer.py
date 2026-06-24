@@ -577,3 +577,72 @@ def test_inactive_agent_flow_drained_then_removed(
     assert post_agent_blocks == [], (
         f"flow not removed: got post-deactivation agent_blocks {post_agent_blocks}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Fix 2 — MEDIUM-2: heartbeat wait is bounded by time-to-next-heartbeat
+# ---------------------------------------------------------------------------
+
+def test_heartbeat_bounded_by_interval(
+    project_tree: tuple[str, Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Heartbeat arrives within heartbeat_interval_s even when poll_interval_s > it.
+
+    With poll=0.1 s and heartbeat=0.12 s, if the wait timeout were simply
+    ``poll_interval_s`` the heartbeat could be delayed past ``heartbeat_interval_s``:
+
+      * First poll wakes at ~0.1 s → elapsed < 0.12 s → no heartbeat.
+      * Second poll wakes at ~0.2 s → heartbeat finally fires (0.2 s total).
+
+    The fix bounds the timeout to
+    ``min(poll_interval_s, max(0, heartbeat_interval_s - elapsed))``, so after
+    the first poll the remaining wait is max(0, 0.12 - 0.1) = 0.02 s and the
+    heartbeat fires at ~0.12 s.
+
+    The observer is disabled (no-op) so that watchdog wakes cannot accidentally
+    mask the polling-only worst-case.  ``max_allowed = 0.17 s`` sits between the
+    unbound outcome (~0.20 s) and the bounded outcome (~0.12 s).
+    """
+    class _NoObserver:
+        """No-op watchdog observer that never emits filesystem events."""
+
+        def schedule(self, *_args: object, **_kwargs: object) -> None:
+            """Ignore scheduling requests."""
+
+        def start(self) -> None:
+            """Start nothing."""
+
+        def stop(self) -> None:
+            """Stop nothing."""
+
+        def join(self, *_args: object, **_kwargs: object) -> None:
+            """Join nothing."""
+
+    monkeypatch.setattr(streamer, "Observer", _NoObserver)
+
+    project_path, transcript, _ = project_tree
+    # poll=0.1, heartbeat=0.12: without the fix heartbeat fires at ~0.20 s.
+    # With the fix it fires at ~0.12 s.  max_allowed=0.17 s discriminates.
+    settings = _fast_settings(poll_interval_s=0.1, heartbeat_interval_s=0.12)
+    max_allowed = settings.heartbeat_interval_s + 0.05  # 0.17 s
+
+    async def _scenario() -> float:
+        gen = event_generator(project_path, _SID, transcript, settings)
+        try:
+            await _take(gen, 3)
+            t_start = asyncio.get_running_loop().time()
+            while True:
+                msg = await asyncio.wait_for(gen.__anext__(), timeout=2.0)
+                if _event_name(msg) == "heartbeat":
+                    return asyncio.get_running_loop().time() - t_start
+        finally:
+            await gen.aclose()
+
+    elapsed = _run(_scenario())
+    assert elapsed <= max_allowed, (
+        f"heartbeat took {elapsed:.3f}s; expected <= {max_allowed:.3f}s "
+        f"(heartbeat_interval_s={settings.heartbeat_interval_s}, "
+        f"poll_interval_s={settings.poll_interval_s}). "
+        "Hint: wait timeout must be bounded by time-to-next-heartbeat."
+    )
