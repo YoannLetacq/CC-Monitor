@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import events_router, orchestration_router, sessions_router
+from app.api import events_router, orchestration_router, sessions_router, tmux_router
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
     application.include_router(sessions_router)
     application.include_router(orchestration_router)
     application.include_router(events_router)
+    application.include_router(tmux_router)
 
     _mount_static(application)
 
