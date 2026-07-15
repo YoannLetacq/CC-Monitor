@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from app.services import tmux_source
 
-_LIST_OUTPUT = "main\t0\tshell\t%3\t0\ttitle\t1\t120\t30\tzsh\t/tmp\n"
+_LIST_OUTPUT = "main\t0\tshell\t%3\t0\ttitle\t1\t120\t30\tzsh\t/tmp\t4242\n"
 
 
 def _fake_run(

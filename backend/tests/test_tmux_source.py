@@ -7,9 +7,11 @@ when tmux is absent.
 """
 
 import asyncio
+import json
 import os
 import subprocess
 from collections.abc import Awaitable, Callable
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypeVar
 
@@ -24,9 +26,9 @@ _SID_NEW = "aaaa1111bbbb2222"
 _SID_OLD = "cccc3333dddd4444"
 
 _LINE_TEMPLATE = (
-    "main\t0\tshell\t%0\t0\tzsh\t1\t120\t30\tzsh\t/tmp\n"
-    "main\t0\tshell\t%1\t1\tvim\t0\t120\t30\tclaude\t{proj}\n"
-    "team\t1\twork\t%5\t0\tnode\t1\t80\t24\tnode\t/nonexistent\n"
+    "main\t0\tshell\t%0\t0\tzsh\t1\t120\t30\tzsh\t/tmp\t4242\n"
+    "main\t0\tshell\t%1\t1\tvim\t0\t120\t30\tclaude\t{proj}\t4243\n"
+    "team\t1\twork\t%5\t0\tnode\t1\t80\t24\tnode\t/nonexistent\t4244\n"
 )
 
 
@@ -66,13 +68,44 @@ def _fake_run(
     return run
 
 
-def _write_session_marker(project_dir: Path, sid: str) -> Path:
+def _write_session_marker(
+    project_dir: Path, sid: str, pid: int | None = None
+) -> Path:
     """Create ``.omc/state/sessions/<sid>/session-started.json`` under a project."""
     state_dir = project_dir / ".omc" / "state" / "sessions" / sid
     state_dir.mkdir(parents=True, exist_ok=True)
     marker = state_dir / "session-started.json"
-    marker.write_text('{"session_id": "%s"}' % sid, encoding="utf-8")
+    payload: dict[str, object] = {"session_id": sid}
+    if pid is not None:
+        payload["pid"] = pid
+    marker.write_text(json.dumps(payload), encoding="utf-8")
     return marker
+
+
+def _fake_proc(
+    root: Path,
+    tree: dict[int, list[int]],
+    comms: dict[int, str] | None = None,
+    starts: dict[int, float] | None = None,
+    btime: int = 1_000_000,
+) -> Path:
+    """Build a fake ``/proc``: children files, plus optional comm/stat/btime."""
+    (root / "stat").parent.mkdir(parents=True, exist_ok=True)
+    (root / "stat").write_text(f"cpu 0 0 0 0\nbtime {btime}\n", encoding="ascii")
+    clk = tmux_source._CLK_TCK
+    for pid, children in tree.items():
+        task_dir = root / str(pid) / "task" / str(pid)
+        task_dir.mkdir(parents=True, exist_ok=True)
+        children_file = task_dir / "children"
+        children_file.write_text(" ".join(str(c) for c in children), encoding="ascii")
+        comm = (comms or {}).get(pid, "zsh")
+        (root / str(pid) / "comm").write_text(comm + "\n", encoding="ascii")
+        jiffies = int(((starts or {}).get(pid, btime) - btime) * clk)
+        tail = " ".join(["0"] * 18 + [str(jiffies), "0", "0"])
+        (root / str(pid) / "stat").write_text(
+            f"{pid} ({comm}) S {tail}\n", encoding="ascii"
+        )
+    return root
 
 
 def _settings(poll: float = 0.01, heartbeat: float = 999.0) -> Settings:
@@ -130,7 +163,9 @@ def test_list_sessions_skips_malformed_lines(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Malformed list-panes lines are skipped, valid ones kept."""
-    output = "garbage-without-tabs\nmain\t0\tshell\t%0\t0\tt\t1\t80\t24\tzsh\t/tmp\n"
+    output = (
+        "garbage-without-tabs\nmain\t0\tshell\t%0\t0\tt\t1\t80\t24\tzsh\t/tmp\t4242\n"
+    )
     monkeypatch.setattr(tmux_source.subprocess, "run", _fake_run(output))
     sessions = tmux_source.list_tmux_sessions()
     assert len(sessions) == 1
@@ -155,6 +190,95 @@ def test_correlate_none_cases(tmp_path: Path) -> None:
     _write_session_marker(tmp_path, _SID_NEW)
     assert tmux_source.correlate_pane("zsh", str(tmp_path)) is None
     assert tmux_source.correlate_pane("claude", str(tmp_path / "void")) is None
+
+
+def test_correlate_pid_tree_beats_mtime(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The session whose recorded pid is in the pane's pid tree wins over mtime."""
+    proc = _fake_proc(tmp_path / "proc", {100: [200, 300], 200: [], 300: []})
+    monkeypatch.setattr(tmux_source, "_PROC_ROOT", proc)
+    old_marker = _write_session_marker(tmp_path, _SID_OLD, pid=200)
+    _write_session_marker(tmp_path, _SID_NEW, pid=999)
+    stat = old_marker.stat()
+    os.utime(old_marker, (stat.st_atime - 3600, stat.st_mtime - 3600))
+
+    sid = tmux_source.correlate_pane("claude", str(tmp_path), pane_pid=100)
+
+    assert sid == _SID_OLD
+
+
+def test_correlate_pid_tree_falls_back_to_mtime(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Without a pid match (unreadable /proc), the newest marker still wins."""
+    monkeypatch.setattr(tmux_source, "_PROC_ROOT", tmp_path / "no-proc")
+    old_marker = _write_session_marker(tmp_path, _SID_OLD, pid=200)
+    _write_session_marker(tmp_path, _SID_NEW)
+    stat = old_marker.stat()
+    os.utime(old_marker, (stat.st_atime - 3600, stat.st_mtime - 3600))
+
+    sid = tmux_source.correlate_pane("claude", str(tmp_path), pane_pid=100)
+
+    assert sid == _SID_NEW
+
+
+def test_correlate_start_time_disambiguates_dead_marker_pids(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Dead recorded pids: the claude descendant's start time picks the session.
+
+    Two workers share one cwd; each marker's pid is a dead hook pid (never a
+    live descendant). The pane's claude process started at T; its session is
+    the one whose ``started_at`` is closest at-or-after T — not the newest.
+    """
+    btime = 1_000_000
+    proc = _fake_proc(
+        tmp_path / "proc",
+        {100: [200], 200: []},
+        comms={200: "claude"},
+        starts={200: btime + 1000},
+        btime=btime,
+    )
+    monkeypatch.setattr(tmux_source, "_PROC_ROOT", proc)
+
+    def _iso(epoch: float) -> str:
+        return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+
+    mine = _write_session_marker(tmp_path, _SID_OLD, pid=555)
+    _rewrite_started_at(mine, _iso(btime + 1002))
+    other = _write_session_marker(tmp_path, _SID_NEW, pid=556)
+    _rewrite_started_at(other, _iso(btime + 2002))
+
+    sid = tmux_source.correlate_pane("claude", str(tmp_path), pane_pid=100)
+
+    assert sid == _SID_OLD
+
+
+def _rewrite_started_at(marker: Path, started_at: str) -> None:
+    """Inject a ``started_at`` into an existing session marker."""
+    payload = json.loads(marker.read_text(encoding="utf-8"))
+    payload["started_at"] = started_at
+    marker.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_parse_pane_passes_pane_pid(monkeypatch: pytest.MonkeyPatch) -> None:
+    """list-panes plumbing forwards #{pane_pid} to the correlator."""
+    captured: dict[str, int | None] = {}
+
+    def fake_correlate(
+        command: str, cwd: str, pane_pid: int | None = None
+    ) -> None:
+        del command, cwd
+        captured["pane_pid"] = pane_pid
+
+    monkeypatch.setattr(tmux_source, "correlate_pane", fake_correlate)
+    output = "main\t0\tshell\t%0\t0\tt\t1\t80\t24\tclaude\t/tmp\t4242\n"
+    monkeypatch.setattr(tmux_source.subprocess, "run", _fake_run(output))
+
+    tmux_source.list_tmux_sessions()
+
+    assert captured["pane_pid"] == 4242
 
 
 # ---------------------------------------------------------------------------
