@@ -1,4 +1,8 @@
 // Sidebar: Claude Code sessions grouped by state + tmux pole panes.
+// Order keeps live content above the fold: Actives, Récentes, Pôles tmux,
+// then Terminées collapsed by default (can be hundreds of entries).
+
+import { useState } from 'react'
 
 import type { SessionState, SessionSummary, TmuxPane } from '../api/types'
 import type { SidebarData } from '../hooks/useSessions'
@@ -88,13 +92,56 @@ function PaneItem({
   )
 }
 
-export function Sidebar({ data, selection, onSelect }: SidebarProps) {
-  const groups = (['active', 'recent', 'terminated'] as SessionState[]).map(
-    (state) => ({
-      state,
-      items: data.sessions.filter((s) => s.state === state),
-    }),
+// Exported for tests: presentational, Sidebar owns the open/close state.
+export function TerminatedSection({
+  sessions,
+  open,
+  onToggle,
+  selection,
+  onSelect,
+}: {
+  sessions: SessionSummary[]
+  open: boolean
+  onToggle: () => void
+  selection: Selection
+  onSelect: (selection: Selection) => void
+}) {
+  if (sessions.length === 0) return null
+  return (
+    <section>
+      <button
+        onClick={onToggle}
+        aria-expanded={open}
+        className="w-full text-left px-1 text-xs font-medium uppercase tracking-wide text-gray-500 mb-1 flex items-center gap-1 hover:text-gray-300 transition-colors"
+      >
+        <span className={`transition-transform ${open ? 'rotate-90' : ''}`}>
+          ▸
+        </span>
+        {STATE_LABELS.terminated} ({sessions.length})
+      </button>
+      {open &&
+        sessions.map((session) => (
+          <SessionItem
+            key={session.sessionId}
+            session={session}
+            selected={
+              selection?.kind === 'claude' &&
+              selection.session.sessionId === session.sessionId
+            }
+            onClick={() => onSelect({ kind: 'claude', session })}
+          />
+        ))}
+    </section>
   )
+}
+
+export function Sidebar({ data, selection, onSelect }: SidebarProps) {
+  const [showTerminated, setShowTerminated] = useState(false)
+  const groups = (['active', 'recent'] as SessionState[]).map((state) => ({
+    state,
+    items: data.sessions.filter((s) => s.state === state),
+  }))
+  const terminated = data.sessions.filter((s) => s.state === 'terminated')
 
   return (
     <aside className="w-72 shrink-0 h-full overflow-y-auto bg-gray-900 border-r border-gray-800 p-3 space-y-4">
@@ -170,6 +217,14 @@ export function Sidebar({ data, selection, onSelect }: SidebarProps) {
           <p className="px-1 text-xs text-gray-500">Aucun pôle tmux détecté</p>
         )}
       </section>
+
+      <TerminatedSection
+        sessions={terminated}
+        open={showTerminated}
+        onToggle={() => setShowTerminated((open) => !open)}
+        selection={selection}
+        onSelect={onSelect}
+      />
     </aside>
   )
 }
