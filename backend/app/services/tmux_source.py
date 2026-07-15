@@ -17,7 +17,9 @@ to an empty result, never a 500 (graceful no-tmux).
 """
 
 import asyncio
+import json
 import logging
+import os
 import subprocess
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
@@ -51,10 +53,14 @@ _LIST_FORMAT = _FIELD_SEP.join(
         "#{pane_height}",
         "#{pane_current_command}",
         "#{pane_current_path}",
+        "#{pane_pid}",
     )
 )
 _TMUX_TIMEOUT_S = 5.0
 _CLAUDE_COMMANDS = frozenset({"claude", "node"})
+_PROC_ROOT = Path("/proc")
+_CLK_TCK = os.sysconf("SC_CLK_TCK")
+_START_SLACK_S = 5.0
 
 
 def _run_tmux(args: list[str]) -> str | None:
@@ -81,30 +87,140 @@ def _run_tmux(args: list[str]) -> str | None:
     return proc.stdout
 
 
-def correlate_pane(command: str, cwd: str) -> str | None:
+def _pid_descendants(root_pid: int) -> set[int]:
+    """Return ``root_pid`` plus every descendant pid, read-only via ``/proc``.
+
+    Breadth-first walk over ``/proc/<pid>/task/<tid>/children``; any
+    unreadable branch (process gone, permission) is pruned silently so the
+    walk never raises.
+    """
+    seen: set[int] = set()
+    stack = [root_pid]
+    while stack:
+        pid = stack.pop()
+        if pid in seen:
+            continue
+        seen.add(pid)
+        try:
+            task_dirs = list((_PROC_ROOT / str(pid) / "task").iterdir())
+        except OSError:
+            continue
+        for task_dir in task_dirs:
+            try:
+                children = (task_dir / "children").read_text(encoding="ascii")
+            except OSError:
+                continue
+            stack.extend(int(child) for child in children.split())
+    return seen
+
+
+def _marker_identity(marker: Path) -> tuple[int | None, float | None]:
+    """Read ``(recorded pid, started_at epoch)`` from a session marker.
+
+    Both fields are optional in practice; any read/parse failure degrades to
+    ``(None, None)`` so correlation falls back instead of raising.
+    """
+    try:
+        payload = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None, None
+    if not isinstance(payload, dict):
+        return None, None
+    pid = payload.get("pid")
+    started: float | None = None
+    raw_started = payload.get("started_at")
+    if isinstance(raw_started, str):
+        try:
+            moment = datetime.fromisoformat(raw_started)
+        except ValueError:
+            moment = None
+        if moment is not None:
+            if moment.tzinfo is None:
+                moment = moment.replace(tzinfo=timezone.utc)
+            started = moment.timestamp()
+    return (pid if isinstance(pid, int) else None), started
+
+
+def _proc_start_time(pid: int) -> float | None:
+    """Wall-clock start time of ``pid`` via ``/proc``; ``None`` when unreadable."""
+    try:
+        proc_stat = (_PROC_ROOT / "stat").read_text(encoding="ascii")
+        pid_stat = (_PROC_ROOT / str(pid) / "stat").read_text(encoding="ascii")
+    except OSError:
+        return None
+    boot: float | None = None
+    fields = pid_stat.rpartition(")")[2].split()
+    try:
+        for line in proc_stat.splitlines():
+            if line.startswith("btime "):
+                boot = float(line.split()[1])
+                break
+        jiffies = int(fields[19])
+    except (IndexError, ValueError):
+        return None
+    if boot is None:
+        return None
+    return boot + jiffies / _CLK_TCK
+
+
+def _claude_start_time(pids: set[int]) -> float | None:
+    """Start time of the first Claude-ish process among ``pids``, if any."""
+    for pid in sorted(pids):
+        try:
+            comm = (_PROC_ROOT / str(pid) / "comm").read_text(encoding="ascii")
+        except OSError:
+            continue
+        if comm.strip() in _CLAUDE_COMMANDS:
+            return _proc_start_time(pid)
+    return None
+
+
+def correlate_pane(command: str, cwd: str, pane_pid: int | None = None) -> str | None:
     """Best-effort pane → Claude session id; nullable, never raising.
 
-    ponytail: heuristic = newest ``session-started.json`` under the pane's
-    cwd (``.omc/state/sessions/<sid>/``) when the pane runs a Claude-ish
-    command; upgrade to pid-tree matching if precision ever matters.
+    Pid-tree matching (QA F1, shared-cwd workers): walk the pane pid's
+    descendants and prefer (1) the session whose recorded ``pid`` is a live
+    descendant, else (2) the session whose ``started_at`` is closest
+    at-or-after the claude descendant's process start time — markers record
+    the short-lived SessionStart-hook pid, so (1) rarely fires today.
+    Fallback (3): newest ``session-started.json`` under the pane's cwd
+    (``.omc/state/sessions/<sid>/``), the original heuristic.
     """
     if command not in _CLAUDE_COMMANDS:
         return None
     sessions_dir = Path(cwd) / ".omc" / "state" / "sessions"
-    best_mtime = float("-inf")
-    best_sid: str | None = None
     try:
         entries = list(sessions_dir.iterdir())
     except OSError:
         return None
+    candidates: list[tuple[float, str]] = []
+    identities: dict[str, tuple[int | None, float | None]] = {}
     for entry in entries:
+        marker = entry / "session-started.json"
         try:
-            mtime = (entry / "session-started.json").stat().st_mtime
+            mtime = marker.stat().st_mtime
         except OSError:
             continue
-        if mtime > best_mtime:
-            best_mtime, best_sid = mtime, entry.name
-    return best_sid
+        candidates.append((mtime, entry.name))
+        identities[entry.name] = _marker_identity(marker)
+    if not candidates:
+        return None
+    if pane_pid is not None:
+        descendants = _pid_descendants(pane_pid)
+        exact = [c for c in candidates if identities[c[1]][0] in descendants]
+        if exact:
+            return max(exact)[1]
+        start = _claude_start_time(descendants)
+        if start is not None:
+            timed = sorted(
+                (started - start, sid)
+                for _, sid in candidates
+                if (started := identities[sid][1]) is not None
+                and started - start >= -_START_SLACK_S
+            )
+            if timed:
+                return timed[0][1]
+    return max(candidates)[1]
 
 
 def _parse_pane(fields: list[str]) -> tuple[str, int, str, TmuxPane] | None:
@@ -126,6 +242,7 @@ def _parse_pane(fields: list[str]) -> tuple[str, int, str, TmuxPane] | None:
             height,
             command,
             cwd,
+            pane_pid,
         ) = fields
         window_index = int(window_raw)
         pane = TmuxPane(
@@ -136,7 +253,7 @@ def _parse_pane(fields: list[str]) -> tuple[str, int, str, TmuxPane] | None:
             width=int(width),
             height=int(height),
             command=command,
-            claude_session_id=correlate_pane(command, cwd),
+            claude_session_id=correlate_pane(command, cwd, int(pane_pid)),
         )
     except ValueError:
         logger.debug("tmux: skipping malformed list-panes line: %r", fields)
