@@ -21,7 +21,7 @@ export const MOCK_TMUX_SESSIONS: TmuxSession[] = [
             width: 190,
             height: 45,
             command: 'claude',
-            claude_session_id: null,
+            claudeSessionId: null,
           },
         ],
       },
@@ -37,7 +37,7 @@ export const MOCK_TMUX_SESSIONS: TmuxSession[] = [
             width: 95,
             height: 45,
             command: 'claude',
-            claude_session_id: 'mock-backend-session',
+            claudeSessionId: 'mock-backend-session',
           },
           {
             id: '2',
@@ -47,7 +47,7 @@ export const MOCK_TMUX_SESSIONS: TmuxSession[] = [
             width: 95,
             height: 45,
             command: 'claude',
-            claude_session_id: null,
+            claudeSessionId: null,
           },
         ],
       },
@@ -70,17 +70,19 @@ export function mockPaneStream(
   onStatus?: (status: SseStatus) => void,
 ): () => void {
   let tick = 0
+  // Deltas are full-screen replaces on the real backend, so the mock keeps
+  // the growing "screen" itself and resends it whole each tick.
+  const screen = [`[mock] tmux pane %${paneId} — flux simulé`, ...MOCK_LINES]
   onStatus?.('open')
   const snapshot: PaneSnapshotEvent = {
-    lines: [`[mock] tmux pane %${paneId} — flux simulé`, ...MOCK_LINES],
-    cursor: 0,
+    lines: screen,
+    cursor: screen.length,
   }
   handlers.snapshot?.(snapshot)
   const timer = setInterval(() => {
     tick += 1
-    const delta: PaneDeltaEvent = {
-      lines: [`${MOCK_LINES[tick % MOCK_LINES.length]}`],
-    }
+    screen.push(MOCK_LINES[tick % MOCK_LINES.length])
+    const delta: PaneDeltaEvent = { lines: [...screen] }
     handlers.delta?.(delta)
     if (tick % 5 === 0) handlers.heartbeat?.({ ts: '' })
   }, 1500)

@@ -80,8 +80,8 @@ function PaneItem({
         <span className="block truncate">{label}</span>
         <span className="block text-xs text-gray-500 truncate">
           {pane.command}
-          {pane.claude_session_id !== null &&
-            ` · session ${pane.claude_session_id.slice(0, 8)}`}
+          {pane.claudeSessionId !== null &&
+            ` · session ${pane.claudeSessionId.slice(0, 8)}`}
         </span>
       </span>
     </button>

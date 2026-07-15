@@ -27,8 +27,8 @@ export function PaneView({ pane, label }: { pane: TmuxPane; label: string }) {
           <h2 className="text-lg font-semibold text-white truncate">{label}</h2>
           <p className="text-xs text-gray-500 truncate">
             {pane.command} · {pane.width}×{pane.height}
-            {pane.claude_session_id !== null &&
-              ` · session Claude ${pane.claude_session_id.slice(0, 8)}`}
+            {pane.claudeSessionId !== null &&
+              ` · session Claude ${pane.claudeSessionId.slice(0, 8)}`}
           </p>
         </div>
         <span className="flex items-center gap-2 text-xs text-gray-300 shrink-0">

@@ -1,5 +1,7 @@
-// Live terminal feed for a tmux pane: snapshot replaces the buffer, deltas
-// append, capped to bound memory. pane_closed flips a terminal-closed flag.
+// Live terminal feed for a tmux pane: both snapshot and delta REPLACE the
+// buffer (the backend sends the full current screen each time, since a
+// terminal is screen-oriented, not a log), capped to bound memory.
+// pane_closed flips a terminal-closed flag.
 
 import { useEffect, useState } from 'react'
 
@@ -35,9 +37,7 @@ export function usePaneFeed(paneId: string | null): PaneFeed {
         },
         delta: (data) => {
           const event = data as PaneDeltaEvent
-          setLines((prev) =>
-            [...prev, ...event.lines.map(stripAnsi)].slice(-MAX_LINES),
-          )
+          setLines(event.lines.map(stripAnsi).slice(-MAX_LINES))
         },
         pane_closed: () => setClosed(true),
         heartbeat: () => undefined,

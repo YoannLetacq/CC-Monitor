@@ -1,7 +1,6 @@
 // Wire types for the CC-monitor API.
-// Claude session payloads are camelCase (backend pydantic alias_generator).
-// tmux payloads follow the conductor-fixed API CONTRACT verbatim (snake_case
-// claude_session_id included).
+// All payloads are camelCase (backend pydantic alias_generator=to_camel),
+// tmux included (see backend/app/schemas/tmux.py).
 
 export type SessionState = 'active' | 'recent' | 'terminated'
 
@@ -63,7 +62,7 @@ export interface TmuxPane {
   width: number
   height: number
   command: string
-  claude_session_id: string | null
+  claudeSessionId: string | null
 }
 
 export interface TmuxWindow {
@@ -80,9 +79,12 @@ export interface TmuxSession {
 // SSE payloads for GET /api/tmux/panes/{id}/events
 export interface PaneSnapshotEvent {
   lines: string[]
+  // Line count of the snapshot (one past the last line).
   cursor: number
 }
 
+// The backend sends the FULL current screen on every delta (replace, not
+// append) — a terminal is screen-oriented, not a log.
 export interface PaneDeltaEvent {
   lines: string[]
 }
